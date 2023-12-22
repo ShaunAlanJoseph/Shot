@@ -1,0 +1,16 @@
+#Files to be Ignored
+*.env
+*.zip
+temp*
+
+#Folders to be Ignored
+.venv/
+.vscode/
+__pycache__/
+Logs/
+Shot (Old)/
+
+#Temporary
+encrypted.txt
+decrypted.txt
+key.txt
