@@ -45,8 +45,8 @@ def str_before(haystack, after, include = 0):
 
   return haystack[0 : pos]
 
-def str_replace(haystack, needle, str = ""):
-  if not needle:
+def str_replace(haystack, needle, str = "", count = -1):
+  if (not needle or not count):
     return haystack
   
   pos = haystack.find(needle)
@@ -54,4 +54,4 @@ def str_replace(haystack, needle, str = ""):
   if (pos == -1):
     return haystack
   
-  return haystack[0 : pos] + str + str_replace(haystack[pos + len(needle) :], needle, str)
+  return haystack[0 : pos] + str + str_replace(haystack[pos + len(needle) :], needle, str, count - 1)
