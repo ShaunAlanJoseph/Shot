@@ -55,3 +55,14 @@ def str_replace(haystack, needle, str = "", count = -1):
     return haystack
   
   return haystack[0 : pos] + str + str_replace(haystack[pos + len(needle) :], needle, str, count - 1)
+
+"""
+def angle_around_link(haystack): # not ready
+  if "https://" not in haystack:
+    return haystack
+  
+  str_b4 = str_before(haystack, "https://")
+  haystack = str_after(haystack, "https://")
+  link = str_before(haystack)
+  return str_b4 + "<" + link + ">" + angle_around_link(haystack)
+"""

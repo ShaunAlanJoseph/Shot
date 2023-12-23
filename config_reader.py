@@ -1,6 +1,7 @@
 import os
 import base64
 from cryptography.fernet import Fernet
+import custom_string_functions as csf
 
 def generate_key():
   key = Fernet.generate_key()
@@ -42,4 +43,18 @@ def encrypted_file_write(file, file_data, key = ""):
   file.write(file_data)
   file.close()
 
+def config_reader(file, key, group = "", section = ""):
+  # group > section > key
+  file = file.open(file, "r")
+  file_data = file.read()
+  file.close()
   
+  if group:
+    file_data = csf.str_in_bw(file_data, "<{" + group + "}>", "<{/" + group + "}>")
+  
+  if section:
+    file_data = csf.str_in_bw(file_data, "<[" + section + "]>", "<[/" + section + "]>")
+  
+  value = csf.str_in_bw(file_data, "<" + key + ">", "</" + key + ">")
+  return value
+    

@@ -2,6 +2,8 @@
 *.env
 *.zip
 temp*
+*(Old)*
+*.data
 
 #Folders to be Ignored
 .venv/
@@ -9,6 +11,7 @@ temp*
 __pycache__/
 Logs/
 Shot (Old)/
+Temp*/
 
 #Temporary
 encrypted.txt
