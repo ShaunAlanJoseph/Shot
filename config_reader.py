@@ -45,7 +45,7 @@ def encrypted_file_write(file, file_data, key = ""):
 
 def config_reader(file, key, group = "", section = ""):
   # group > section > key
-  file = file.open(file, "r")
+  file = open(file, "r")
   file_data = file.read()
   file.close()
   

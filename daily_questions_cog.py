@@ -2,13 +2,16 @@ from discord.ext import commands, tasks
 import custom_string_functions as csf
 import daily_questions as dq
 from datetime import datetime, timedelta
-import config_reader as cr
 from Data import emojis
 
 class DailyQuestions_Cog(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
     self.check_dq_time.start()
+    
+  @commands.command(name="dq.ping")
+  async def dq_ping(self, ctx):
+    await ctx.send(f"{ctx.author.mention} pong!!")
   
   @commands.command(name="dq.add")
   async def dq_add(self, ctx):
@@ -18,9 +21,9 @@ class DailyQuestions_Cog(commands.Cog):
     dqf = dq.DailyQuestions_File()
     new_day = dq.DailyQuestions_Day(msg)
     if dqf.write_new_day(new_day):
-      await ctx.send(f"Questions for ({new_day.nth}) {new_day.strftime('%d-%m-%Y')} have been added.")
+      await ctx.send(f"Questions for ({new_day.nth}) {new_day.date.strftime('%d-%m-%Y')} have been added.")
     else:
-      await ctx.send(f"({new_day.nth}) {new_day.strftime('%d-%m-%Y')} -> Clashes with an existing day.")
+      await ctx.send(f"({new_day.nth}) {new_day.date.strftime('%d-%m-%Y')} -> Clashes with an existing day.")
   
   @commands.command(name="dq.remove")
   async def dq_remove(self, ctx, day):
@@ -28,12 +31,13 @@ class DailyQuestions_Cog(commands.Cog):
       day = dq.str_to_datetime(day)
       if not day:
         await ctx.send("Invalid date!")
+    else:
+      day = int(day)
     
     dqf = dq.DailyQuestions_File()
-    daily_questions = dqf.get_questions()
-    removed_day = dqf.remove_day(daily_questions[day])
+    removed_day = dqf.remove_day(day)
     if removed_day:
-      await ctx.send(f"Questions for ({removed_day.nth}) {removed_day.strftime('%d-%m-%Y')} have been removed.")
+      await ctx.send(f"Questions for ({removed_day.nth}) {removed_day.date.strftime('%d-%m-%Y')} have been removed.")
     else:
       if isinstance(day, datetime):
         await ctx.send(f"Questions for {day.strftime('%d-%m-%Y')} were not found.")
@@ -46,7 +50,7 @@ class DailyQuestions_Cog(commands.Cog):
     day_list = dqf.get_day_list()
     msg = ""
     for x in day_list:
-      msg += x[0] + " -> " + x[1].strftime('%d-%m-%Y') + "\n"
+      msg += str(x[0]) + " -> " + x[1].strftime('%d-%m-%Y') + "\n"
     await ctx.send(f"Here is a list of days:\n{msg}")
   
   @commands.command(name="dq.get_day_raw")
@@ -61,9 +65,9 @@ class DailyQuestions_Cog(commands.Cog):
     
     dqf = dq.DailyQuestions_File()
     daily_questions = dqf.get_questions()
-    if day in daily_questions:
-      day = daily_questions[day]
-      msg = dq.day.to_str()
+    if day in daily_questions.days:
+      day = daily_questions.days[day]
+      msg = day.to_str()
       await ctx.send(f"Questions for ({day.nth}) {day.date.strftime('%d-%m-%Y')}:\n```\n{msg}\n```")
     else:
       if isinstance(day, int):
@@ -98,13 +102,14 @@ class DailyQuestions_Cog(commands.Cog):
     hours = int(csf.str_before(time, ":"))
     mins = int(csf.str_after(time, ":"))
     try:
-      datetime(0, 0, 0, hours, mins)
+      datetime(1, 1, 1, hours, mins)
     except:
       await ctx.send("Invalid time!")
       return
     dqf = dq.DailyQuestions_File()
     dqf.details.time = time
     dqf.write_details()
+    await ctx.send(f"The time for daily questions has been set to {time}")
   
   @commands.command(name="dq.get_time")
   async def dq_get_time(self, ctx):
@@ -126,7 +131,7 @@ class DailyQuestions_Cog(commands.Cog):
   async def dq_get_ques_chnl(self, ctx):
     dqf = dq.DailyQuestions_File()
     channel = self.bot.get_channel(dqf.details.ques_channel)
-    await ctx.send(f"The channel for daily questions is {channel.category}: {channel.name} - {channel.id}.")
+    await ctx.send(f"The channel for daily questions is **{channel.category}** >> **{channel.name}** - {channel.id}.")
   
   @commands.command(name="dq.set_soln_chnl")
   async def dq_set_soln_chnl(self, ctx, channel: int):
@@ -142,7 +147,7 @@ class DailyQuestions_Cog(commands.Cog):
   async def dq_get_soln_chnl(self, ctx):
     dqf = dq.DailyQuestions_File()
     channel = self.bot.get_channel(dqf.details.soln_channel)
-    await ctx.send(f"The channel for the solutions is {channel.category}: {channel.name} - {channel.id}.")
+    await ctx.send(f"The channel for the solutions is **{channel.category}** >> **{channel.name}** - {channel.id}.")
   
   @commands.command(name="dq.set_announcement_chnl")
   async def dq_set_announcement_chnl(self, ctx, channel: int):
@@ -162,6 +167,7 @@ class DailyQuestions_Cog(commands.Cog):
   
   @commands.command(name="dq.set_admin_roles")
   async def dq_set_admin_roles(self, ctx, admin_roles):
+    admin_roles_str = admin_roles
     admin_roles = admin_roles[1 : len(admin_roles) - 1]
     admin_roles = admin_roles.split(",")
     for x in range(len(admin_roles)):
@@ -176,18 +182,20 @@ class DailyQuestions_Cog(commands.Cog):
     dqf = dq.DailyQuestions_File()
     dqf.details.admin_roles = admin_roles
     dqf.write_details()
+    await ctx.send(f"The admin roles have been set to:\n{admin_roles_str}")
   
   @commands.command(name="dq.get_admin_roles")
   async def dq_get_admin_roles(self, ctx):
     dqf = dq.DailyQuestions_File()
     admin_roles_str = "["
     for x in dqf.details.admin_roles:
-      admin_roles += x + ","
-    admin_roles_str = admin_roles_str[0 : len(admin_roles_str) - 1] + "]"
+      admin_roles_str += str(x) + ","
+    admin_roles_str = admin_roles_str[0 : max(len(admin_roles_str) - 1, 1)] + "]"
     await ctx.send(f"The daily question admins are:\n{admin_roles_str}")
   
   @commands.command(name="dq.set_admin_users")
   async def dq_set_admin_users(self, ctx, admin_users):
+    admin_users_str = admin_users
     admin_users = admin_users[1 : len(admin_users) - 1]
     admin_users = admin_users.split(",")
     for x in range(len(admin_users)):
@@ -202,14 +210,15 @@ class DailyQuestions_Cog(commands.Cog):
     dqf = dq.DailyQuestions_File()
     dqf.details.admin_users = admin_users
     dqf.write_details()
+    await ctx.send(f"The admins have been set to:\n{admin_users_str}")
   
   @commands.command(name="dq.get_admin_users")
   async def dq_get_admin_users(self, ctx):
     dqf = dq.DailyQuestions_File()
     admin_users_str = "["
     for x in dqf.details.admin_users:
-      admin_users += x + ","
-    admin_users_str = admin_users_str[0 : len(admin_users_str) - 1] + "]"
+      admin_users_str += str(x) + ","
+    admin_users_str = admin_users_str[0 : max(len(admin_users_str) - 1, 1)] + "]"
     await ctx.send(f"The daily question admins are:\n{admin_users_str}")
   
   @tasks.loop(seconds=45)
@@ -218,7 +227,7 @@ class DailyQuestions_Cog(commands.Cog):
     curr_time = datetime.now() + timedelta(hours=5, minutes=30)
     if dq_time.strftime('%H:%M') == curr_time.strftime('%H:%M'):
       print(f"dq: {dq_time.strftime('%H:%M')} now: {curr_time.strftime('%H:%M')} Now is the time!")
-      announce_questions_and_soln(self.bot)
+      await announce_questions_and_soln(self.bot)
     else:
       print(f"dq: {dq_time.strftime('%H:%M')} now: {curr_time.strftime('%H:%M')}")
   
@@ -226,8 +235,8 @@ class DailyQuestions_Cog(commands.Cog):
   async def before_check_dq_time(self):
     await self.bot.wait_until_ready()
 
-def setup(bot):
-  bot.add_cog(DailyQuestions_Cog(bot))
+async def setup(bot):
+  await bot.add_cog(DailyQuestions_Cog(bot))
 
 async def announce_questions_and_soln(bot):
   date = datetime.now().strftime('%d-%m-%Y')

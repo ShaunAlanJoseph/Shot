@@ -30,6 +30,7 @@ class DailyQuestions_Day:
   def __init__(self, curr_day_str: str):
     self.nth = int(csf.str_in_bw(curr_day_str, "<nth>", "</nth>"))
     self.date = str_to_datetime(csf.str_in_bw(curr_day_str, "<date>", "</date>"))
+    self.ques = []
     while "</q>" in curr_day_str:
       curr_ques_str = csf.str_in_bw(curr_day_str, "<q>", "</q>")
       curr_day_str = csf.str_after(curr_day_str, "</q>")
@@ -41,11 +42,11 @@ class DailyQuestions_Day:
     
   def to_str(self):
     day_str = "<dq>\n"
-    day_str += "<nth>" + self.nth + "</nth>\n"
+    day_str += "<nth>" + str(self.nth) + "</nth>\n"
     day_str += "<date>" + self.date.strftime('%d-%m-%Y') + "</date>\n"
     for curr_ques in self.ques:
       day_str += "<q>\n"
-      day_str += "<nth>" + curr_ques.nth + "</nth>\n"
+      day_str += "<nth>" + str(curr_ques.nth) + "</nth>\n"
       day_str += "<level>" + curr_ques.level + "</level>\n"
       day_str += "<link>" + curr_ques.link + "</level>\n"
       day_str += "<note>" + curr_ques.note + "</level>\n"
@@ -105,22 +106,23 @@ class DailyQuestions_Details:
   
   def to_str(self):
     string = "<time>" + self.time + "</time>\n"
-    string += "<dq_ques_channel>" + self.ques_channel + "</dq_ques_channel>\n"
-    string += "<dq_soln_channel>" + self.soln_channel + "</dq_soln_channel>\n"
-    string += "<dq_announcement_channel>" + self.announcement_channel + "</dq_announcement_channel>\n"
+    string += "<dq_ques_channel>" + str(self.ques_channel) + "</dq_ques_channel>\n"
+    string += "<dq_soln_channel>" + str(self.soln_channel) + "</dq_soln_channel>\n"
+    string += "<dq_announcement_channel>" + str(self.announcement_channel) + "</dq_announcement_channel>\n"
     string += "<dq_admin_roles>"
     for x in self.admin_roles:
-      string += "<a>" + x + "</a>"
+      string += "<a>" + str(x) + "</a>"
     string += "</dq_admin_roles>\n"
     string += "<dq_admin_users>"
     for x in self.admin_users:
-      string += "<a>" + x + "</a>"
+      string += "<a>" + str(x) + "</a>"
     string += "</dq_admin_users>\n"
+    return string
 
 class DailyQuestions_File:
   def __init__(self):
-    file_path = "/home/runner/Shot/Data/daily_questions.data"
-    self.file_data = cr.encrypted_file_read(file_path)
+    self.file_path = "/home/runner/Shot/Data/daily_questions.data"
+    self.file_data = cr.encrypted_file_read(self.file_path)
     dq_details_str = csf.str_in_bw(self.file_data, "<dq_details>", "</dq_details>")
     self.details = DailyQuestions_Details(dq_details_str)
   
@@ -128,7 +130,7 @@ class DailyQuestions_File:
     cr.encrypted_file_write(self.file_path, self.file_data)
 
   def write_details(self):
-    dq_details_str = self.details.to_str()
+    dq_details_str =  "<dq_details>" + self.details.to_str() + "</dq_details>"
     dq_old_details_str = csf.str_in_bw(self.file_data, "<dq_details>", "</dq_details>", 1)
     self.file_data = csf.str_replace(self.file_data, dq_old_details_str, dq_details_str, 1)
     self.write()
@@ -147,26 +149,27 @@ class DailyQuestions_File:
     DailyQuestions_DayList = []
     for x in DailyQuestions.days:
       if isinstance(x, int):
-        DailyQuestions_DayList.append([x, DailyQuestions[x].date])
+        DailyQuestions_DayList.append([x, DailyQuestions.days[x].date])
     return DailyQuestions_DayList
   
-  def remove_day(self, curr_day: DailyQuestions_Day):
+  def remove_day(self, day):
     DailyQuestions = self.get_questions()
-    if curr_day not in DailyQuestions.days:
+    if day not in DailyQuestions.days:
       return False
     data = csf.str_in_bw(self.file_data, "<start>", "<end>")
+    day = DailyQuestions.days[day]
     while "</dq>" in data:
       curr_day_str = csf.str_in_bw(data, "<dq>", "</dq>", 1)
       data = csf.str_after(data, "</dq>")
-      if "<nth>" + curr_day.nth + "</nth>" in curr_day_str:
+      if "<nth>" + str(day.nth) + "</nth>" in curr_day_str:
         self.file_data = csf.str_replace(self.file_data, curr_day_str, count = 1)
         break
     self.write()
-    return curr_day
+    return day
   
   def write_new_day(self, curr_day: DailyQuestions_Day):
     day_exists = self.day_exists(curr_day)
-    if not day_exists:
+    if day_exists:
       return False
     day_str = curr_day.to_str()
     self.file_data = csf.str_replace(self.file_data, "<end>", day_str + "<end>", 1)
@@ -175,9 +178,8 @@ class DailyQuestions_File:
 
   def day_exists(self, curr_day):
     DailyQuestions = self.get_questions()
-    if isinstance(curr_day, str):
-      if curr_day.isdigit():
-        curr_day = int(curr_day)
+    if isinstance(curr_day, str) and curr_day.isdigit():
+      curr_day = int(curr_day)
     if isinstance(curr_day, datetime) or isinstance(curr_day, int):
       if curr_day in DailyQuestions.days:
         return DailyQuestions.days[curr_day]
@@ -202,7 +204,7 @@ def get_dq_time():
   file_path = "/home/runner/Shot/Data/daily_questions.data"
   time = cr.encrypted_file_read(file_path)
   time = csf.str_in_bw(time, "<time>", "</time>")
-  time = datetime(0, 0, 0, int(csf.str_before(time, ":")), int(csf.str_after(time, ":")))
+  time = datetime(1, 1, 1, int(csf.str_before(time, ":")), int(csf.str_after(time, ":")))
   return time
 
 def get_level(level):
