@@ -11,7 +11,7 @@ async def run():
   intents = discord.Intents.default()
   intents.message_content = True
   
-  bot_message_channel = ""
+  bot_msg_channel = ""
   
   bot = commands.Bot(command_prefix="!", intents=intents)
   
@@ -25,7 +25,7 @@ async def run():
     print(f"Logged in as User: {bot.user} (ID: {bot.user.id})")
     print("------")
     
-    nonlocal bot_message_channel
+    nonlocal bot_msg_channel
     bot_msg_channel = int(config("bot_msg_channel"))
     bot_msg_channel = bot.get_channel(bot_msg_channel)
     

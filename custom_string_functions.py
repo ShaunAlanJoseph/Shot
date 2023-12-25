@@ -1,4 +1,4 @@
-def str_in_bw(haystack, before, after, include = 0):
+def str_in_bw(haystack: str, before: str, after: str, include = 0):
     
   if (not after or not before):
     return ""
@@ -17,7 +17,7 @@ def str_in_bw(haystack, before, after, include = 0):
   
   return haystack[0: pos2]
 
-def str_after(haystack, before, include = 0):
+def str_after(haystack: str, before: str, include = 0):
   if not before:
     return haystack
   
@@ -31,7 +31,7 @@ def str_after(haystack, before, include = 0):
   
   return haystack[pos + len(before) :]
 
-def str_before(haystack, after, include = 0):
+def str_before(haystack: str, after: str, include = 0):
   if not after:
     return haystack
   
@@ -45,7 +45,7 @@ def str_before(haystack, after, include = 0):
 
   return haystack[0 : pos]
 
-def str_replace(haystack, needle, str = "", count = -1):
+def str_replace(haystack: str, needle: str, replace_with: str = "", count = -1):
   if (not needle or not count):
     return haystack
   
@@ -54,7 +54,7 @@ def str_replace(haystack, needle, str = "", count = -1):
   if (pos == -1):
     return haystack
   
-  return haystack[0 : pos] + str + str_replace(haystack[pos + len(needle) :], needle, str, count - 1)
+  return haystack[0 : pos] + replace_with + str_replace(haystack[pos + len(needle) :], needle, replace_with, count - 1)
 
 """
 def angle_around_link(haystack): # not ready

@@ -1,5 +1,7 @@
 from discord.ext import commands, tasks
 import custom_string_functions as csf
+import custom_random_functions as crf
+import custom_discord_functions as cdf
 import daily_questions as dq
 from datetime import datetime, timedelta
 from Data import emojis
@@ -88,7 +90,7 @@ class DailyQuestions_Cog(commands.Cog):
     dqf = dq.DailyQuestions_File()
     day = dqf.day_exists(day)
     if day:
-      msg = dq.day.to_str()
+      msg = day.to_str()
       await ctx.send(f"Questions for ({day.nth}) {day.date.strftime('%d-%m-%Y')}:\n```\n{msg}\n```")
     else:
       if isinstance(day, int):
@@ -98,16 +100,13 @@ class DailyQuestions_Cog(commands.Cog):
     pass
   
   @commands.command(name="dq.set_time")
-  async def dq_set_time(self, ctx, time):
-    hours = int(csf.str_before(time, ":"))
-    mins = int(csf.str_after(time, ":"))
-    try:
-      datetime(1, 1, 1, hours, mins)
-    except:
-      await ctx.send("Invalid time!")
+  async def dq_set_time(self, ctx, time_str):
+    time = crf.check_valid_time(time_str)
+    if not time:
+      await ctx.send(f"Invalid time: {time_str}.")
       return
     dqf = dq.DailyQuestions_File()
-    dqf.details.time = time
+    dqf.details.time = time.strftime('%H:%M')
     dqf.write_details()
     await ctx.send(f"The time for daily questions has been set to {time}")
   
@@ -118,67 +117,61 @@ class DailyQuestions_Cog(commands.Cog):
     pass
   
   @commands.command(name="dq.set_ques_chnl")
-  async def dq_set_ques_chnl(self, ctx, channel: int):
-    channel = self.bot.get_channel(channel)
-    if not channel:
-      await ctx.send("Invalid channel!")
+  async def dq_set_ques_chnl(self, ctx, channel_str):
+    if not cdf.check_valid_channel(self.bot, channel_str):
+      await ctx.send(f"Invalid channel: {channel_str}.")
       return
     dqf = dq.DailyQuestions_File()
-    dqf.details.ques_channel = channel
+    dqf.details.ques_channel = int(channel_str)
     dqf.write_details()
   
   @commands.command(name="dq.get_ques_chnl")
   async def dq_get_ques_chnl(self, ctx):
     dqf = dq.DailyQuestions_File()
-    channel = self.bot.get_channel(dqf.details.ques_channel)
+    channel = cdf.check_valid_channel(self.bot, dqf.details.ques_channel)
     await ctx.send(f"The channel for daily questions is **{channel.category}** >> **{channel.name}** - {channel.id}.")
   
   @commands.command(name="dq.set_soln_chnl")
-  async def dq_set_soln_chnl(self, ctx, channel: int):
-    channel = self.bot.get_channel(channel)
-    if not channel:
-      await ctx.send("Invalid channel!")
+  async def dq_set_soln_chnl(self, ctx, channel_str):
+    if not cdf.check_valid_channel(channel_str):
+      await ctx.send(f"Invalid channel: {channel_str}.")
       return
     dqf = dq.DailyQuestions_File()
-    dqf.details.soln_channel = channel
+    dqf.details.soln_channel = int(channel_str)
     dqf.write_details()
   
   @commands.command(name="dq.get_soln_chnl")
   async def dq_get_soln_chnl(self, ctx):
     dqf = dq.DailyQuestions_File()
-    channel = self.bot.get_channel(dqf.details.soln_channel)
+    channel = cdf.check_valid_channel(self.bot, dqf.details.soln_channel)
     await ctx.send(f"The channel for the solutions is **{channel.category}** >> **{channel.name}** - {channel.id}.")
   
   @commands.command(name="dq.set_announcement_chnl")
-  async def dq_set_announcement_chnl(self, ctx, channel: int):
-    channel = self.bot.get_channel(channel)
-    if not channel:
-      await ctx.send("Invalid channel!")
+  async def dq_set_announcement_chnl(self, ctx, channel_str):
+    if not cdf.check_valid_channel(channel_str):
+      await ctx.send(f"Invalid channel: {channel_str}.")
       return
     dqf = dq.DailyQuestions_File()
-    dqf.details.announcement_channel = channel
+    dqf.details.announcement_channel = int(channel_str)
     dqf.write_details()
   
   @commands.command(name="dq.get_announcement_chnl")
   async def dq_get_announcement_chnl(self, ctx):
     dqf = dq.DailyQuestions_File()
-    channel = self.bot.get_channel(dqf.details.announcement_channel)
+    channel = cdf.check_valid_channel(self.bot, dqf.details.announcement_channel)
     await ctx.send(f"The channel for daily question announcements is {channel.category}: {channel.name} - {channel.id}.")
   
   @commands.command(name="dq.set_admin_roles")
   async def dq_set_admin_roles(self, ctx, admin_roles):
     admin_roles_str = admin_roles
-    admin_roles = admin_roles[1 : len(admin_roles) - 1]
-    admin_roles = admin_roles.split(",")
+    admin_roles = admin_roles.strip("[]").split(",")
+    possible = True
     for x in range(len(admin_roles)):
-      admin_roles[x] = int(admin_roles[x])
-      user = ctx.guild.get_role(admin_roles[x])
-      possible = True
-      if not user:
+      if cdf.check_valid_role(self.bot, ctx.guild_id, admin_roles[x]):
         await ctx.send(f"{admin_roles[x]} is not a valid user.")
         possible = False
-      if not possible:
-        return
+    if not possible:
+      return
     dqf = dq.DailyQuestions_File()
     dqf.details.admin_roles = admin_roles
     dqf.write_details()
@@ -190,23 +183,22 @@ class DailyQuestions_Cog(commands.Cog):
     admin_roles_str = "["
     for x in dqf.details.admin_roles:
       admin_roles_str += str(x) + ","
-    admin_roles_str = admin_roles_str[0 : max(len(admin_roles_str) - 1, 1)] + "]"
+    admin_roles_str = admin_roles_str.strip("[,") + "]"
     await ctx.send(f"The daily question admins are:\n{admin_roles_str}")
   
   @commands.command(name="dq.set_admin_users")
   async def dq_set_admin_users(self, ctx, admin_users):
     admin_users_str = admin_users
-    admin_users = admin_users[1 : len(admin_users) - 1]
-    admin_users = admin_users.split(",")
+    admin_users = admin_users.strip("[]").split(",")
+    possible = True
     for x in range(len(admin_users)):
       admin_users[x] = int(admin_users[x])
       user = self.bot.get_user(admin_users[x])
-      possible = True
-      if not user:
+      if cdf.check_valid_user(self.bot, ctx.guild_id, admin_users[x]):
         await ctx.send(f"{admin_users[x]} is not a valid user.")
         possible = False
-      if not possible:
-        return
+    if not possible:
+      return
     dqf = dq.DailyQuestions_File()
     dqf.details.admin_users = admin_users
     dqf.write_details()
@@ -218,7 +210,7 @@ class DailyQuestions_Cog(commands.Cog):
     admin_users_str = "["
     for x in dqf.details.admin_users:
       admin_users_str += str(x) + ","
-    admin_users_str = admin_users_str[0 : max(len(admin_users_str) - 1, 1)] + "]"
+    admin_users_str = admin_users_str.strip("[,") + "]"
     await ctx.send(f"The daily question admins are:\n{admin_users_str}")
   
   @tasks.loop(seconds=45)
@@ -240,19 +232,19 @@ async def setup(bot):
 
 async def announce_questions_and_soln(bot):
   date = datetime.now().strftime('%d-%m-%Y')
-  date = dq.str_to_datetime(date)
+  date = crf.check_valid_date(date)
   dqf = dq.DailyQuestions_File()
-  ques_msg = dqf.days[date].to_announce_ques()
-  soln_msg = dqf.days[date].nth - 1
-  if soln_msg:
+  
+  soln_nth = dqf.days[date].nth - 1
+  if soln_nth:
     soln_msg = dqf.days[soln_msg].to_announce_soln()
-    soln_channel = dqf.details.soln_channel
-    soln_channel = bot.get_channel(soln_channel)
+    soln_channel = cdf.check_valid_channel(dqf.check_valid_channel(dqf.details.soln_channel))
     await soln_channel.send(soln_msg["title"])
     for x in soln_msg["questions"]:
       await soln_channel.send(x)
-  ques_channel = dqf.details.ques_channel
-  ques_channel = bot.get_channel(ques_channel)
+  
+  ques_msg = dqf.days[date].to_announce_ques()
+  ques_channel = cdf.check_valid_channel(dqf.details.ques_channel)
   await ques_channel.send(ques_msg["title"])
   for x in ques_msg["questions"]:
     msg = await ques_channel.send(x)

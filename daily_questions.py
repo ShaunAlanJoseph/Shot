@@ -1,5 +1,6 @@
 from datetime import datetime
 import custom_string_functions as csf
+import custom_random_functions as crf
 from Data import emojis
 import config_reader as cr
 
@@ -29,7 +30,7 @@ class DailyQuestions_Day:
   
   def __init__(self, curr_day_str: str):
     self.nth = int(csf.str_in_bw(curr_day_str, "<nth>", "</nth>"))
-    self.date = str_to_datetime(csf.str_in_bw(curr_day_str, "<date>", "</date>"))
+    self.date = crf.check_valid_date(csf.str_in_bw(curr_day_str, "<date>", "</date>"))
     self.ques = []
     while "</q>" in curr_day_str:
       curr_ques_str = csf.str_in_bw(curr_day_str, "<q>", "</q>")
@@ -48,9 +49,9 @@ class DailyQuestions_Day:
       day_str += "<q>\n"
       day_str += "<nth>" + str(curr_ques.nth) + "</nth>\n"
       day_str += "<level>" + curr_ques.level + "</level>\n"
-      day_str += "<link>" + curr_ques.link + "</level>\n"
-      day_str += "<note>" + curr_ques.note + "</level>\n"
-      day_str += "<soln>" + curr_ques.soln + "</level>\n"
+      day_str += "<link>" + curr_ques.link + "</link>\n"
+      day_str += "<note>" + curr_ques.note + "</note>\n"
+      day_str += "<soln>" + curr_ques.soln + "</soln>\n"
       day_str += "</q>\n"
     day_str += "</dq>\n"
     return day_str
@@ -185,7 +186,7 @@ class DailyQuestions_File:
         return DailyQuestions.days[curr_day]
       return False
     elif isinstance(curr_day, str):
-      curr_day = str_to_datetime(curr_day)
+      curr_day = crf.check_valid_date(curr_day)
       if not curr_day or curr_day not in DailyQuestions.days:
         return False
       return DailyQuestions.days[curr_day]
@@ -230,19 +231,6 @@ def get_level(level):
     return "Hard-Giveup"
   else:
     return "Not Defined"
-
-def str_to_datetime(date):
-  day = csf.str_before(date, "-")
-  date = csf.str_after(date, "-")
-  month = csf.str_before(date, "-")
-  year = csf.str_after(date, "-")
-  if (len(year) == 2):
-    year = "20" + year
-  try:
-    date = datetime(int(year), int(month), int(day))
-  except:
-    return False
-  return date
 
 
 
