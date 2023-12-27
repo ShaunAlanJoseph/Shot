@@ -4,6 +4,8 @@ import custom_random_functions as crf
 from Data import emojis
 import config_reader as cr
 
+daily_questions_file_path = "/home/runner/Shot/Data/Daily Questions/daily_questions.data"
+
 class DailyQuestions_Question:
 
   def __init__(self, nth: int, level, link, note, soln):
@@ -14,12 +16,12 @@ class DailyQuestions_Question:
     self.soln = soln
   
   def __init__(self, curr_ques_str: str):
-    self.nth = int(csf.str_in_bw(curr_ques_str, "<nth>", "</nth>"))
-    self.level = csf.str_in_bw(curr_ques_str, "<level>", "</level>")
+    self.nth = int(csf.str_in_bw(curr_ques_str, "<q_n>", "</q_n>"))
+    self.level = csf.str_in_bw(curr_ques_str, "<q_lvl>", "</q_lvl>")
     self.level = get_level(self.level)
-    self.link = csf.str_in_bw(curr_ques_str, "<link>", "</link>")
-    self.note = csf.str_in_bw(curr_ques_str, "<note>", "</note>")
-    self.soln = csf.str_in_bw(curr_ques_str, "<soln>", "</soln>")
+    self.link = csf.str_in_bw(curr_ques_str, "<q_link>", "</q_link>")
+    self.note = csf.str_in_bw(curr_ques_str, "<q_note>", "</q_note>")
+    self.soln = csf.str_in_bw(curr_ques_str, "<q_soln>", "</q_soln>")
 
 class DailyQuestions_Day:
 
@@ -47,13 +49,13 @@ class DailyQuestions_Day:
     day_str += "<date>" + self.date.strftime('%d-%m-%Y') + "</date>\n"
     for curr_ques in self.ques:
       day_str += "<q>\n"
-      day_str += "<nth>" + str(curr_ques.nth) + "</nth>\n"
-      day_str += "<level>" + curr_ques.level + "</level>\n"
-      day_str += "<link>" + curr_ques.link + "</link>\n"
-      day_str += "<note>" + curr_ques.note + "</note>\n"
-      day_str += "<soln>" + curr_ques.soln + "</soln>\n"
+      day_str += "<q_n>" + str(curr_ques.nth) + "</q_n>\n"
+      day_str += "<q_lvl>" + curr_ques.level + "</q_lvl>\n"
+      day_str += "<q_link>" + curr_ques.link + "</q_link>\n"
+      day_str += "<q_note>" + curr_ques.note + "</q_note>\n"
+      day_str += "<q_soln>" + curr_ques.soln + "</q_soln>\n"
       day_str += "</q>\n"
-    day_str += "</dq>\n"
+    day_str += "</dq>"
     return day_str
 
   def arrange(self):
@@ -66,7 +68,7 @@ class DailyQuestions_Day:
     for x in self.ques:
       ques_msg = f"**{x.nth}) {x.level}:** <{x.link}>"
       if x.note:
-        ques_msg += f"Note: {x.note}"
+        ques_msg += f"\nNote: {x.note}"
       msg["questions"].append(ques_msg)
     return msg
   
@@ -75,8 +77,28 @@ class DailyQuestions_Day:
     msg["title"] = f"**DAY {self.nth} - {self.date.strftime('%d-%m-%Y')} - SOLUTIONS**"
     msg["questions"] = []
     for x in self.ques:
-      soln_msg = f"**{x.nth}) {x.level}:** <{x.link}\nSoln: {x.soln}>"
-      msg["questions"].append(soln_msg)
+      if "</img>" not in x.soln:
+        soln_msg = f"**{x.nth}) {x.level}:** <{x.link}>\n**Soln:** {x.soln}"
+        msg["questions"].append([soln_msg])
+      else:
+        soln = x.soln
+        soln_list = []
+        soln_msg = f"**{x.nth}) {x.level}:** <{x.link}>\n**Soln:** {csf.str_before(soln, '<img>')}"
+        soln = csf.str_after(soln, "<img>")
+        soln_list.append(soln_msg)
+        while "</img>" in soln:
+          img = csf.str_before(soln, "</img>")
+          soln = csf.str_after(soln, "</img>")
+          soln_list.append(img)
+          if "<img>" not in soln:
+            break
+          soln_msg = csf.str_before(soln, "<img>")
+          soln = csf.str_after(soln, "<img>")
+          if soln_msg.strip("\n\r\t "):
+            soln_list.append(soln_msg)
+        if soln.strip("\n\r\t "):
+          soln_list.append(soln)
+        msg["questions"].append(soln_list)
     return msg
 
 class DailyQuestions_All:
@@ -91,9 +113,10 @@ class DailyQuestions_All:
 class DailyQuestions_Details:
   def __init__(self, dq_details_str: str):
     self.time = csf.str_in_bw(dq_details_str, "<time>", "</time>")
-    self.ques_channel = int(csf.str_in_bw(dq_details_str, "<dq_ques_channel>", "</dq_ques_channel>"))
-    self.soln_channel = int(csf.str_in_bw(dq_details_str, "<dq_soln_channel>", "</dq_soln_channel>"))
-    self.announcement_channel = int(csf.str_in_bw(dq_details_str, "<dq_announcement_channel>", "</dq_announcement_channel>"))
+    self.ques_chnl = int(csf.str_in_bw(dq_details_str, "<dq_ques_chnl>", "</dq_ques_chnl>"))
+    self.soln_chnl = int(csf.str_in_bw(dq_details_str, "<dq_soln_chnl>", "</dq_soln_chnl>"))
+    self.announcement_chnl = int(csf.str_in_bw(dq_details_str, "<dq_announcement_chnl>", "</dq_announcement_chnl>"))
+    self.admin_chnl = int(csf.str_in_bw(dq_details_str, "<dq_admin_chnl>", "</dq_admin_chnl>"))
     self.admin_roles = []
     temp_str = csf.str_in_bw(dq_details_str, "<dq_admin_roles>", "</dq_admin_roles>")
     while "</a>" in temp_str:
@@ -106,10 +129,12 @@ class DailyQuestions_Details:
       temp_str = csf.str_after(temp_str, "</a>")
   
   def to_str(self):
-    string = "<time>" + self.time + "</time>\n"
-    string += "<dq_ques_channel>" + str(self.ques_channel) + "</dq_ques_channel>\n"
-    string += "<dq_soln_channel>" + str(self.soln_channel) + "</dq_soln_channel>\n"
-    string += "<dq_announcement_channel>" + str(self.announcement_channel) + "</dq_announcement_channel>\n"
+    string = "<dq_details>\n"
+    string += "<time>" + self.time + "</time>\n"
+    string += "<dq_ques_chnl>" + str(self.ques_chnl) + "</dq_ques_chnl>\n"
+    string += "<dq_soln_chnl>" + str(self.soln_chnl) + "</dq_soln_chnl>\n"
+    string += "<dq_announcement_chnl>" + str(self.announcement_chnl) + "</dq_announcement_chnl>\n"
+    string += "<dq_admin_chnl>" + str(self.admin_chnl) + "</dq_admin_chnl>\n"
     string += "<dq_admin_roles>"
     for x in self.admin_roles:
       string += "<a>" + str(x) + "</a>"
@@ -118,11 +143,12 @@ class DailyQuestions_Details:
     for x in self.admin_users:
       string += "<a>" + str(x) + "</a>"
     string += "</dq_admin_users>\n"
+    string += "</dq_details>"
     return string
 
 class DailyQuestions_File:
   def __init__(self):
-    self.file_path = "/home/runner/Shot/Data/daily_questions.data"
+    self.file_path = daily_questions_file_path
     self.file_data = cr.encrypted_file_read(self.file_path)
     dq_details_str = csf.str_in_bw(self.file_data, "<dq_details>", "</dq_details>")
     self.details = DailyQuestions_Details(dq_details_str)
@@ -131,7 +157,7 @@ class DailyQuestions_File:
     cr.encrypted_file_write(self.file_path, self.file_data)
 
   def write_details(self):
-    dq_details_str =  "<dq_details>" + self.details.to_str() + "</dq_details>"
+    dq_details_str =  self.details.to_str()
     dq_old_details_str = csf.str_in_bw(self.file_data, "<dq_details>", "</dq_details>", 1)
     self.file_data = csf.str_replace(self.file_data, dq_old_details_str, dq_details_str, 1)
     self.write()
@@ -153,27 +179,50 @@ class DailyQuestions_File:
         DailyQuestions_DayList.append([x, DailyQuestions.days[x].date])
     return DailyQuestions_DayList
   
-  def remove_day(self, day):
+  def remove_day(self, curr_day):
     DailyQuestions = self.get_questions()
-    if day not in DailyQuestions.days:
+    if curr_day not in DailyQuestions.days:
       return False
     data = csf.str_in_bw(self.file_data, "<start>", "<end>")
-    day = DailyQuestions.days[day]
+    curr_day = DailyQuestions.days[curr_day]
+    curr_day_str = ""
     while "</dq>" in data:
       curr_day_str = csf.str_in_bw(data, "<dq>", "</dq>", 1)
       data = csf.str_after(data, "</dq>")
-      if "<nth>" + str(day.nth) + "</nth>" in curr_day_str:
+      if "<nth>" + str(curr_day.nth) + "</nth>" in curr_day_str:
         self.file_data = csf.str_replace(self.file_data, curr_day_str, count = 1)
         break
     self.write()
-    return day
+    return {"day": curr_day, "raw": curr_day_str} # So that the exact data removed can be printed.
+
+  def replace_day(self, old_day, new_day: DailyQuestions_Day):
+    DailyQuestions = self.get_questions()
+    if old_day not in DailyQuestions.days:
+      print(f"Old day corresponding to: {old_day} was not found.")
+      return False
+    old_day = DailyQuestions.days[old_day]
+    del DailyQuestions.days[old_day.nth]
+    del DailyQuestions.days[old_day.date]
+    if new_day.nth in DailyQuestions.days or new_day.date in DailyQuestions.days:
+      print(f"New day is clashing with a day other than the date to be replaced. nth: {new_day.nth} date: {new_day.date.strftime('%d-%m-%Y')}")
+      return False
+    data = csf.str_in_bw(self.file_data, "<start>", "<end>")
+    curr_day_str = ""
+    while "</dq>" in data:
+      curr_day_str = csf.str_in_bw(data, "<dq>", "</dq>", 1)
+      data = csf.str_after(data, "</dq>")
+      if "<nth>" + str(old_day.nth) + "</nth>" in curr_day_str:
+        self.file_data = csf.str_replace(self.file_data, curr_day_str, new_day.to_str(), 1)
+        break
+    self.write()
+    return {"day": old_day, "raw": curr_day_str} # So that the exact data replaced can be printed.
   
   def write_new_day(self, curr_day: DailyQuestions_Day):
     day_exists = self.day_exists(curr_day)
     if day_exists:
       return False
     day_str = curr_day.to_str()
-    self.file_data = csf.str_replace(self.file_data, "<end>", day_str + "<end>", 1)
+    self.file_data = csf.str_replace(self.file_data, "<end>", day_str + "\n<end>", 1)
     self.write()
     return True
 
@@ -202,14 +251,14 @@ class DailyQuestions_File:
       return {"same_nth": same_nth, "same_date": same_date}
 
 def get_dq_time():
-  file_path = "/home/runner/Shot/Data/daily_questions.data"
+  file_path = daily_questions_file_path
   time = cr.encrypted_file_read(file_path)
   time = csf.str_in_bw(time, "<time>", "</time>")
   time = datetime(1, 1, 1, int(csf.str_before(time, ":")), int(csf.str_after(time, ":")))
   return time
 
 def get_level(level):
-  if level in ["Cakewalk", "Easy", "Medium", "Hard", "Giveup"]:
+  if level in ["Cakewalk", "Easy", "Medium", "Hard", "Giveup", "Cakewalk-Easy", "Easy-Medium", "Medium-Hard", "Hard-Giveup"]:
     return level
   elif (level == 'C'):
     return "Cakewalk"
@@ -231,12 +280,3 @@ def get_level(level):
     return "Hard-Giveup"
   else:
     return "Not Defined"
-
-
-
-
-
-
-
-
-

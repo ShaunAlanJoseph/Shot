@@ -1,1 +1,5 @@
 white_check_mark = "✅"
+sparkles = "✨"
+sneezing_face = "🤧"
+grimacing = "😬"
+face_with_raised_eyebrow = "🤨"
