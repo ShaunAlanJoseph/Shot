@@ -33,7 +33,7 @@ async def check_valid_role(bot, guild_id, role_id):
     return None
   
   try:
-    role_api = await guild.fetch_role(role_id)
+    role_api = guild.get_role(role_id)
     return role_api
   except discord.NotFound:
     print(f"Invalid role_id: {role_id}.")

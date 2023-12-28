@@ -8,6 +8,9 @@ from Data import emojis
 
 dq_admin_users = []
 dq_admin_roles = []
+dq_time = ""
+
+dq_questions_posted_file = "/home/runner/Shot/Data/Daily Questions/questions_posted.data"
 
 def is_dq_admin():
   async def predicate(ctx):
@@ -21,9 +24,10 @@ class DailyQuestions_Cog(commands.Cog):
   def __init__(self, bot):
     self.bot = bot
     dqf = dq.DailyQuestions_File()
-    global dq_admin_users, dq_admin_roles
+    global dq_admin_users, dq_admin_roles, dq_time
     dq_admin_users = dqf.details.admin_users
     dq_admin_roles = dqf.details.admin_roles
+    dq_time = dqf.details.time
     self.check_dq_time.start()
   
   @commands.command(name="dq.ping", description="Pongs you...duh!")
@@ -181,6 +185,8 @@ class DailyQuestions_Cog(commands.Cog):
       return
     dqf = dq.DailyQuestions_File()
     dqf.details.time = time.strftime('%H:%M')
+    global dq_time
+    dq_time = dqf.details.time
     dqf.write_details()
     await ctx.send(f"The time for daily questions has been set to {time_str}")
   
@@ -194,12 +200,14 @@ class DailyQuestions_Cog(commands.Cog):
   @commands.command(name="dq.set_ques_chnl")
   @is_dq_admin()
   async def dq_set_ques_chnl(self, ctx, channel_str):
-    if not await cdf.check_valid_chnl(self.bot, channel_str):
+    channel = await cdf.check_valid_channel(self.bot, channel_str)
+    if not channel:
       await ctx.send(f"Invalid channel: {channel_str}.")
       return
     dqf = dq.DailyQuestions_File()
     dqf.details.ques_chnl = int(channel_str)
     dqf.write_details()
+    await ctx.send(f"The channel for daily questions set to **{channel.category}** >> **{channel.name}** - {channel.id}.")
   
   @commands.command(name="dq.get_ques_chnl")
   @is_dq_admin()
@@ -211,12 +219,14 @@ class DailyQuestions_Cog(commands.Cog):
   @commands.command(name="dq.set_soln_chnl")
   @is_dq_admin()
   async def dq_set_soln_chnl(self, ctx, channel_str):
-    if not await cdf.check_valid_channel(self.bot, channel_str):
+    channel = await cdf.check_valid_channel(self.bot, channel_str)
+    if not channel:
       await ctx.send(f"Invalid channel: {channel_str}.")
       return
     dqf = dq.DailyQuestions_File()
     dqf.details.soln_chnl = int(channel_str)
     dqf.write_details()
+    await ctx.send(f"The channel for the solutions set to **{channel.category}** >> **{channel.name}** - {channel.id}.")
   
   @commands.command(name="dq.get_soln_chnl")
   @is_dq_admin()
@@ -245,12 +255,14 @@ class DailyQuestions_Cog(commands.Cog):
   @commands.command(name="dq.set_admin_chnl")
   @is_dq_admin()
   async def dq_set_admin_chnl(self, ctx, channel_str):
-    if not await cdf.check_valid_channel(self.bot, channel_str):
+    channel = await cdf.check_valid_channel(self.bot, channel_str)
+    if not channel:
       await ctx.send(f"Invalid channel: {channel_str}.")
       return
     dqf = dq.DailyQuestions_File()
     dqf.details.admin_chnl = int(channel_str)
     dqf.write_details()
+    await ctx.send(f"The channel for daily question administration set to {channel.category}: {channel.name} - {channel.id}.")
   
   @commands.command(name="dq.get_admin_chnl")
   @is_dq_admin()
@@ -268,15 +280,15 @@ class DailyQuestions_Cog(commands.Cog):
     possible = True
     for x in range(len(admin_roles)):
       if not await cdf.check_valid_role(self.bot, ctx.guild_id, admin_roles[x]):
-        await ctx.send(f"{admin_roles[x]} is not a valid user.")
+        await ctx.send(f"{admin_roles[x]} is not a valid role.")
         possible = False
     if not possible:
       return
     dqf = dq.DailyQuestions_File()
     dqf.details.admin_roles = admin_roles
-    global dq_admin_users
-    dq_admin_users = admin_roles
     dqf.write_details()
+    global dq_admin_roles
+    dq_admin_roles = admin_roles
     await ctx.send(f"The admin roles have been set to:\n{admin_roles_str}")
   
   @commands.command(name="dq.get_admin_roles")
@@ -305,9 +317,9 @@ class DailyQuestions_Cog(commands.Cog):
       return
     dqf = dq.DailyQuestions_File()
     dqf.details.admin_users = admin_users
+    dqf.write_details()
     global dq_admin_users
     dq_admin_users = admin_users
-    dqf.write_details()
     await ctx.send(f"The admins have been set to:\n{admin_users_str}")
   
   @commands.command(name="dq.get_admin_users")
@@ -319,6 +331,30 @@ class DailyQuestions_Cog(commands.Cog):
       admin_users_str += str(x) + ","
     admin_users_str = admin_users_str.strip(",") + "]"
     await ctx.send(f"The daily question admins are:\n{admin_users_str}")
+  
+  @commands.command(name="dq.reset_posted")
+  @is_dq_admin()
+  async def dq_reset_posted(self, ctx, date):
+    date = crf.check_valid_date(date)
+    if not date:
+      await ctx.send("Invalid Date!")
+      return
+    file = open(dq_questions_posted_file, "r")
+    file_data = file.read()
+    file.close()
+    if "<" + date.strftime('%d-%m-%Y') + ">" not in file_data:
+      await ctx.send(f"Questions were not posted on {date.strftime('%d-%m-%Y')}.")
+      return
+    file_data = csf.str_replace(file_data, "<" + date.strftime('%d-%m-%Y') + ">", count=1)
+    file = open(dq_questions_posted_file, "w")
+    file.write(file_data)
+    file.close()
+    await ctx.send(f"Reset posted question tracker for {date.strftime('%d-%m-%Y')}.")
+  
+  @commands.command(name="dq.announce_ques_and_soln")
+  @is_dq_admin()
+  async def dq_announce_ques_and_soln(self, ctx):
+    await announce_questions_and_soln(self.bot)
   
   @tasks.loop(seconds=45)
   async def check_dq_time(self):
@@ -349,35 +385,48 @@ def get_nth_or_date(date):
     return False
 
 async def announce_questions_and_soln(bot):
-  date = datetime.now().strftime('%d-%m-%Y')
-  file = open("/home/runner/Shot/Data/Daily Questions/questions_posted.data", "r")
+  date = (datetime.now() + timedelta(hours=5, minutes=30)).strftime('%d-%m-%Y')
+  file = open(dq_questions_posted_file, "r")
   ques_posted = file.read()
   file.close()
+  dqf = dq.DailyQuestions_File()
+  admin_chnl = await cdf.check_valid_channel(bot, dqf.details.admin_chnl)
   if "<" + date + ">" in ques_posted:
+    print(f"Questions for {date} have already been posted.")
+    await admin_chnl.send(f"Questions for {date} have aready been posted.")
     return
   ques_posted += "\n" + "<" + date + ">"
-  file = open("/home/runner/Shot/Data/Daily Questions/questions_posted.data", "r")
+  file = open(dq_questions_posted_file, "w")
   file.write(ques_posted)
   file.close()
   date = crf.check_valid_date(date)
-  dqf = dq.DailyQuestions_File()
   DailyQuestions = dqf.get_questions()
   
-  soln_nth = DailyQuestions.days[date].nth - 1
-  while soln_nth not in DailyQuestions.days and (soln_nth > 1):
-    soln_nth -= 1
-  if soln_nth in DailyQuestions.days:
-    await announce_soln(bot, DailyQuestions.days[soln_nth], dqf.details.soln_chnl)
+  questions_found = True
+  if date not in DailyQuestions.days:
+    questions_found = False
+    print(f"Questions for {date.strftime('%d-%m-%Y')} were not found.")
+    await admin_chnl.send(f"Daily Questions for {date.strftime('%d-%m-%Y')} were not found.")
+  
+  soln_found = False
+  soln_date = date
+  while True:
+    soln_date = soln_date - timedelta(days=1)
+    if soln_date in DailyQuestions.days:
+      soln_found = True
+      break
+    elif soln_date < crf.check_valid_date("15-12-2023"):
+      break
+  if soln_found:
+    await announce_soln(bot, DailyQuestions.days[soln_date], dqf.details.soln_chnl)
   else:
-    admin_chnl = await cdf.check_valid_channel(bot, dqf.details.admin_chnl)
+    print(f"Solutions for a day prior to {date.strftime('%d-%m-%Y')} were not found.")
     await admin_chnl.send(f"Daily Questions **Solutionss** for {date.strftime('%d-%m-%Y')} were not found.")
   
-  if date not in DailyQuestions.days:
-    admin_chnl = await cdf.check_valid_channel(bot, dqf.details.admin_chnl)
-    await admin_chnl.send(f"Daily Questions for {date.strftime('%d-%m-%Y')} were not found.")
+  if not questions_found:
     return
-  
   await announce_ques(bot, DailyQuestions.days[date], dqf.details.ques_chnl)
+
 async def announce_ques(bot, day: dq.DailyQuestions_Day, channel: int):
   ques_msg = day.to_announce_ques()
   ques_chnl = await cdf.check_valid_channel(bot, channel)
