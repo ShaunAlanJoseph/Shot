@@ -1,4 +1,4 @@
-def str_in_bw(haystack: str, before: str, after: str, include = 0):
+def in_bw(haystack: str, before: str, after: str, include = 0):
     
   if (not after or not before):
     return ""
@@ -17,9 +17,9 @@ def str_in_bw(haystack: str, before: str, after: str, include = 0):
   
   return haystack[0: pos2]
 
-def str_after(haystack: str, before: str, include = 0):
+def after(haystack: str, before: str, include = 0):
   if not before:
-    return haystack
+    return ""
   
   pos = haystack.find(before)
   
@@ -31,9 +31,9 @@ def str_after(haystack: str, before: str, include = 0):
   
   return haystack[pos + len(before) :]
 
-def str_before(haystack: str, after: str, include = 0):
+def before(haystack: str, after: str, include = 0):
   if not after:
-    return haystack
+    return ""
   
   pos = haystack.find(after)
 
@@ -45,7 +45,7 @@ def str_before(haystack: str, after: str, include = 0):
 
   return haystack[0 : pos]
 
-def str_replace(haystack: str, needle: str, replace_with: str = "", count = -1):
+def replace(haystack: str, needle: str, replace_with: str = "", count = -1):
   if (not needle or not count):
     return haystack
   
@@ -54,15 +54,40 @@ def str_replace(haystack: str, needle: str, replace_with: str = "", count = -1):
   if (pos == -1):
     return haystack
   
-  return haystack[0 : pos] + replace_with + str_replace(haystack[pos + len(needle) :], needle, replace_with, count - 1)
+  return haystack[0 : pos] + replace_with + replace(haystack[pos + len(needle) :], needle, replace_with, count - 1)
+
+def last_occurance(haystack: str, needle: str):
+  pos = -1
+  
+  while True:
+    temp_pos = haystack.find(needle)
+    haystack = haystack[temp_pos + 1:]
+    if (temp_pos == -1):
+      break
+    pos += temp_pos + 1
+
+  return pos
+
+def replace_last_occurance(haystack: str, needle: str, replace_with = ""):
+  if not needle:
+    return haystack
+  
+  pos = last_occurance(haystack, needle)
+  if (pos == -1):
+    return haystack
+  
+  if (len(haystack) == len(needle) + pos):
+    return haystack[0: pos] + replace_with
+  return haystack[0: pos] + replace_with + haystack[pos + len(needle)]
+  
 
 """
 def angle_around_link(haystack): # not ready
   if "https://" not in haystack:
     return haystack
   
-  str_b4 = str_before(haystack, "https://")
-  haystack = str_after(haystack, "https://")
-  link = str_before(haystack)
-  return str_b4 + "<" + link + ">" + angle_around_link(haystack)
+  b4 = before(haystack, "https://")
+  haystack = after(haystack, "https://")
+  link = before(haystack)
+  return b4 + "<" + link + ">" + angle_around_link(haystack)
 """

@@ -43,18 +43,28 @@ def encrypted_file_write(file, file_data, key = ""):
   file.write(file_data)
   file.close()
 
-def config_reader(file, key, group = "", section = ""):
+def config_reader(haystack: str, key, group = "", section = ""):
+  if group:
+    haystack = csf.in_bw(haystack, "<{" + group + "}>", "<{/" + group + "}>")
+  
+  if section:
+    haystack = csf.in_bw(haystack, "<[" + section + "]>", "<[/" + section + "]>")
+  
+  value = csf.in_bw(haystack, "<" + key + ">", "</" + key + ">")
+  return value
+  
+
+def file_config_reader(file, key, group = "", section = ""):
   # group > section > key
   file = open(file, "r")
   file_data = file.read()
   file.close()
   
   if group:
-    file_data = csf.str_in_bw(file_data, "<{" + group + "}>", "<{/" + group + "}>")
+    file_data = csf.in_bw(file_data, "<{" + group + "}>", "<{/" + group + "}>")
   
   if section:
-    file_data = csf.str_in_bw(file_data, "<[" + section + "]>", "<[/" + section + "]>")
+    file_data = csf.in_bw(file_data, "<[" + section + "]>", "<[/" + section + "]>")
   
-  value = csf.str_in_bw(file_data, "<" + key + ">", "</" + key + ">")
+  value = csf.in_bw(file_data, "<" + key + ">", "</" + key + ">")
   return value
-    

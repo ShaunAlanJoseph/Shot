@@ -53,8 +53,15 @@ async def check_valid_channel(bot, channel_id):
     print(f"Invalid channel_id: {channel_id}.")
     return None
 
-def check_has_role(user: discord.Member, role_list: list):
+def check_has_role(user: discord.Member, role_list):
   user_roles = [role.id for role in user.roles]
+  
+  if isinstance(role_list, set):
+    for x in user_roles:
+      if x in role_list:
+        return True
+    return False
+  
   user_roles.sort()
   role_list.sort()
   a = 0; b = 0
@@ -67,7 +74,7 @@ def check_has_role(user: discord.Member, role_list: list):
       b += 1
   return False
 
-def check_user_in_list(user: discord.Member, user_id_list: list):
+def check_user_in_list(user: discord.Member, user_id_list):
   if user.id in user_id_list:
     return True
   return False
