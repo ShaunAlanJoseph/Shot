@@ -31,18 +31,19 @@ class DailyQuestions_Day_NoQuestions(Exception):
   def __init__(self, file_path: str):
     self.file_path = file_path
     self.message = f"No questions found in the file: {self.file_path}."
-    super.__init__(self.message)
+    super().__init__(self.message)
 
 class DailyQuestions_Details_InvalidData(Exception):
   def __init__(self):
     self.message = f"Invalid change made to details."
-    super.__init__(self.message)
+    super().__init__(self.message)
     
 class DailyQuestions_DayDetails_InvalidArguments(Exception):
   def __init__(self):
     self.message = f"Invalid set of arguments passed."
-    super.__init__(self.message)
+    super().__init__(self.message)
 
 class DailyQuestions_AddDay_Clashing(Exception):
   def __init__(self):
-    self.message = f"New day begin added clashes with an existing day."
+    self.message = f"New day being added clashes with an existing day."
+    super().__init__(self.message)

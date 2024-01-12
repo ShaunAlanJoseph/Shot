@@ -1,22 +1,20 @@
 import os
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import app_commands
 import custom_discord_functions as cdf
 import custom_string_functions as csf
 import config_reader as cr
 from Data import emojis
 import asyncio
+from webserver import keep_alive
+import traceback
+import random
+
+keep_alive()
 
 DISCORD_API_SECRET = os.environ['DISCORD_API_SECRET']
 BOT_CONFIG_FILE = "bot.config"
-
-bot_admin_users = cr.config_reader(BOT_CONFIG_FILE, "bot_admin_users")
-bot_admin_users = bot_admin_users.split(",") if bot_admin_users else []
-bot_admin_users = [int(x) for x in bot_admin_users]
-bot_admin_roles = cr.config_reader(BOT_CONFIG_FILE, "bot_admin_roles")
-bot_admin_roles = bot_admin_roles.split(",") if bot_admin_roles else []
-bot_admin_roles = [int(x) for x in bot_admin_roles]
 
 def is_bot_admin():
   async def predicate(ctx):
@@ -26,7 +24,20 @@ def is_bot_admin():
     return False
   return commands.check(predicate)
 
-async def run():
+def config(key, group = "", section = ""):
+  file = open(BOT_CONFIG_FILE, "r")
+  bot_config_data = file.read()
+  file.close()
+  return cr.config_reader(bot_config_data, key, group, section)
+
+bot_admin_users = config("bot_admin_users")
+bot_admin_users = bot_admin_users.split(";") if bot_admin_users else []
+bot_admin_users = [int(x) for x in bot_admin_users]
+bot_admin_roles = config("bot_admin_roles")
+bot_admin_roles = bot_admin_roles.split(";") if bot_admin_roles else []
+bot_admin_roles = [int(x) for x in bot_admin_roles]
+
+async def start():
   intents = discord.Intents.default()
   intents.message_content = True
   
@@ -35,9 +46,6 @@ async def run():
   bot = commands.Bot(command_prefix="!", intents=intents)
   
   await bot.load_extension("daily_questions_cog")
-
-  def config(key, group = "", section = ""):
-    return cr.config_reader(BOT_CONFIG_FILE, key, group, section)
   
   @bot.event
   async def on_ready():
@@ -47,17 +55,39 @@ async def run():
     nonlocal bot_msg_channel
     bot_msg_channel = int(config("bot_msg_channel"))
     bot_msg_channel = bot.get_channel(bot_msg_channel)
-    
     await bot_msg_channel.send(f"Hi, I've logged in as **User:** {bot.user} (**ID:** {bot.user.id})")
+    update_presence.start()
   
+  @bot.event
+  async def on_command_error(ctx, error):
+    traceback.print_exc()
+    await ctx.reply(f"Error: {error}.", mention_author=False)
+  
+  @tasks.loop(seconds=30)
   async def update_presence():
-    member_count = 0
-    for guild in bot.guilds:
-      if guild.member_count:
-        member_count += guild.member_count
-    activity = discord.Activity(name=f"{member_count} skill issues.", type=discord.ActivityType.listening)
-    bot.change_presence(activity=activity)
-  
+    try:
+      activity = ""
+      bot_activity = random.randint(1, 5)
+      if (bot_activity == 1):
+        member_count = 0
+        for guild in bot.guilds:
+          if guild.member_count:
+            member_count += guild.member_count
+        activity = discord.CustomActivity(f"{emojis.weary_face} Listening to {member_count} skill issues.")
+      elif (bot_activity == 2):
+        activity = discord.CustomActivity(f"{emojis.lying_face} I'm a Grandmaster....fr fr")
+      elif (bot_activity == 3):
+        activity = discord.CustomActivity(f"{emojis.blowing_kiss}")
+      elif (bot_activity == 4):
+        activity = discord.CustomActivity(f"{emojis.nerd} Reading the CPH!! {emojis.paper}")
+      elif (bot_activity == 5):
+        activity = discord.Activity(type=discord.ActivityType.listening, name=f"Test Drive {emojis.music}")
+      else:
+        activity = discord.CustomActivity(f"**Shaun's Bot!!**")
+      await bot.change_presence(activity=activity)
+    except Exception as ex:
+      traceback.print_exc()
+
   @bot.event
   async def on_member_join(member: discord.Member):
     await update_presence()
@@ -82,4 +112,5 @@ async def run():
   await bot.start(DISCORD_API_SECRET)
 
 if __name__ == "__main__":
-  asyncio.run(run())
+  keep_alive()
+  asyncio.run(start())

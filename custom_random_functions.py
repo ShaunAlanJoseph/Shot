@@ -68,13 +68,13 @@ def check_valid_date(date: str or datetime, year_first: bool = False):
     separator = "-"
   try:
     if year_first:
-      year = int(csf.before(date, separator))
+      year = csf.before(date, separator)
       if (len(year) == 2):
         year = "20" + year
       year = int(year)
       temp_str = csf.after(date, separator)
       month = int(csf.before(temp_str, separator))
-      day = csf.after(temp_str, separator)
+      day = int(csf.after(temp_str, separator))
     else:
       day = int(csf.before(date, separator))
       temp_str = csf.after(date, separator)
