@@ -7,9 +7,7 @@ import custom_random_functions as crf
 from DailyQuestions import daily_question_errors as dqe
 import config_reader as cr
 import traceback
-
-dq_folder_path = "/home/runner/Shot/DailyQuestions/"
-dq_days_folder_path = dq_folder_path + "Days/"
+import pastebin_reader as pr
 
 class DailyQuestions_Question:
 
@@ -36,16 +34,17 @@ class DailyQuestions_Question:
 
 class DailyQuestions_Day:
   def __init__(self, curr_day: str, from_str: bool = False):
+    self.pbm = pr.PasteBin_main()
     if from_str:
       self.load_from_str(curr_day)
     else:
-      self.file_path = curr_day
+      self.file_name = curr_day
       self.load_from_file()
 
   def load_from_file(self):
-    if not os.path.isfile(self.file_path):
-      raise dqe.DailyQuestions_Day_FileNotFound(self.file_path)
-    curr_day_str = cr.encrypted_file_read(self.file_path)
+    if self.file_name not in self.pbm.main["dq"]["days"]:
+      raise dqe.DailyQuestions_Day_FileNotFound(self.file_name)
+    curr_day_str = self.pbm.get_dq_day(self.file_name)
     self.load_from_str(curr_day_str)
     self.validate_file_name()
 
@@ -55,31 +54,29 @@ class DailyQuestions_Day:
     self.nth = int(cr.config_reader(curr_day_str, "d_nth"))
     self.duration = int(cr.config_reader(curr_day_str, "d_duration"))
     if not (self.start_date and self.nth and self.duration):
-      raise dqe.DailyQuestions_Day_InvalidFileData(self.file_path if hasattr(self, "file_path") else "loaded from str")
-    if not hasattr(self, "file_path"):
-      self.file_path = f"{dq_days_folder_path}[{self.start_date.strftime('%Y-%m-%d')}] {{{self.nth}}} ({self.duration}).data"
+      raise dqe.DailyQuestions_Day_InvalidFileData(self.file_name if hasattr(self, "file_name") else "loaded from str")
+    if not hasattr(self, "file_name"):
+      self.file_name = f"[{self.start_date.strftime('%Y-%m-%d')}] {{{self.nth}}} ({self.duration})"
     self.note = cr.config_reader(curr_day_str, "d_note")
     self.ques = dict()
     while "</q>" in curr_day_str:
       curr_ques_str = csf.in_bw(curr_day_str, "<q>", "</q>")
       curr_day_str = csf.after(curr_day_str, "</q>")
-      curr_ques = DailyQuestions_Question(curr_ques_str, self.file_path)
+      curr_ques = DailyQuestions_Question(curr_ques_str, self.file_name)
       self.ques[curr_ques.nth] = curr_ques
     if not len(self.ques):
-      raise dqe.DailyQuestions_Day_NoQuestions(self.file_path)
+      raise dqe.DailyQuestions_Day_NoQuestions(self.file_name)
 
   def validate_file_name(self):
-    file_name = self.file_path[csf.last_occurance(self.file_path, "/") + 1:]
-    file_name = file_name[0 : csf.last_occurance(file_name, ".")]
-    start_date = csf.in_bw(file_name, "[", "]")
+    start_date = csf.in_bw(self.file_name, "[", "]")
     start_date = crf.check_valid_date(self.start_date, True)
-    nth = int(csf.in_bw(file_name, "{", "}"))
-    duration = int(csf.in_bw(file_name, "(", ")"))
-    if not (file_name and start_date and nth and duration) or (self.start_date != start_date) or (self.nth != nth) or (self.duration != duration):
-      raise dqe.DailyQuestions_Day_InvalidFileName(self.file_path)
+    nth = int(csf.in_bw(self.file_name, "{", "}"))
+    duration = int(csf.in_bw(self.file_name, "(", ")"))
+    if not (self.file_name and start_date and nth and duration) or (self.start_date != start_date) or (self.nth != nth) or (self.duration != duration):
+      raise dqe.DailyQuestions_Day_InvalidFileName(self.file_name)
 
   def write(self):
-    cr.encrypted_file_write(self.file_path, self.to_str())
+    self.pbm.add_dq_day(self.file_name, self.to_str())
 
   def to_str(self):
     string = ""
@@ -92,7 +89,7 @@ class DailyQuestions_Day:
     return string
 
   def to_file_name(self):
-    return f"[{self.start_date.strftime('%Y-%m-%d')}] {{{self.nth}}} ({self.duration}).data"
+    return f"[{self.start_date.strftime('%Y-%m-%d')}] {{{self.nth}}} ({self.duration})"
 
   def to_announce_ques(self):
     msg = dict()
@@ -145,9 +142,9 @@ class DailyQuestions_Day:
 
 class DailyQuestions_Settings:
   def __init__(self, settings_str = ""):
-    self.file_path = dq_folder_path + "settings.data"
     if not settings_str:
-      settings_str = cr.encrypted_file_read(self.file_path)
+      self.pbm = pr.PasteBin_main()
+      settings_str = self.pbm.get_file(self.pbm.main["days"]["settings"])
     self.time = cr.config_reader(settings_str, "time")
     self.time = crf.check_valid_time(self.time)
     self.ques_chnl = cr.config_reader(settings_str, "ques_chnl")
@@ -187,15 +184,15 @@ class DailyQuestions_Settings:
 
   def write(self):
     self.validate()
-    cr.encrypted_file_write(self.file_path, self.to_str())
+    self.pbm.edit_dq_file("settings", self.to_str())
 
 class DailyQuestions_QuestionTracker:
   def __init__(self):
-    self.file_path = dq_folder_path + "question_dump.data"
+    self.pbm = pr.PasteBin_main()
     self.read_questions()
   
   def read_questions(self):
-    file_data = cr.encrypted_file_read(self.file_path)
+    file_data = self.pbm.get_file(self.pbm.main["dq"]["ques_dump"])
     self.ques = dict()
     while "<\q>" in file_data:
       curr_ques = cr.config_reader(file_data, "q")
@@ -272,13 +269,11 @@ class DailyQuestions_QuestionTracker:
     return string
 
   def write(self):
-    cr.encrypted_file_write(self.file_path, self.to_str())
+    self.pbm.edit_dq_file("ques_dump", self.to_str())
   
   def get_ques_from_files(self):
     try:
-      os.remove(self.file_path)
-      open(self.file_path, "w")
-      for filename in glob.glob(dq_days_folder_path + r"[[]????-??-??[]] [{]*[}] [(]*[)].data"):
+      for filename in self.pbm.main["dq"]["days"].keys():
         curr_day = DailyQuestions_Day(filename)
         for v in curr_day.ques.values():
           self.add_ques(v.link, curr_day.nth)
@@ -287,13 +282,12 @@ class DailyQuestions_QuestionTracker:
 
 class DailyQuestions:
   def __init__(self):
-    self.folder_path = dq_folder_path
-    self.days_folder = dq_days_folder_path
+    self.pbm = pr.PasteBin_main()
 
   def get_day_list(self):
     day_list = []
     day_dict = dict()
-    for filename in glob.glob(self.days_folder + r"[[]????-??-??[]] [{]*[}] [(]*[)].data"):
+    for filename in self.pbm.main["dq"]["days"]:
       curr_day = {}
       curr_day["start"] = crf.check_valid_date(csf.in_bw(filename, "[", "]"), True)
       curr_day["nth"] = int(csf.in_bw(filename, "{", "}"))
@@ -321,14 +315,12 @@ class DailyQuestions:
     day_list = self.get_day_list()
     if curr_day not in day_list[0]:
       raise dqe.DailyQuestions_Day_FileNotFound(curr_day)
-    curr_day_path = day_list[0][curr_day]
-    if not os.path.isfile(curr_day_path):
-      raise dqe.DailyQuestions_Day_FileNotFound(curr_day)
-    curr_day = DailyQuestions_Day(curr_day_path)
-    curr_day_raw = cr.encrypted_file_read(curr_day_path)
+    curr_day_file_name = day_list[0][curr_day]
+    curr_day = DailyQuestions_Day(curr_day_file_name)
+    curr_day_raw = self.pbm.get_dq_day(curr_day_file_name)
     ques_tracker = DailyQuestions_QuestionTracker()
     ques_tracker.remove_day_ques(curr_day)
-    os.remove(curr_day_path)
+    self.pbm.remove_dq_day(curr_day_file_name)
     
     return {"day": curr_day, "raw": curr_day_raw}
 
@@ -346,15 +338,15 @@ class DailyQuestions:
     day_list = self.get_day_list()
     if curr_day not in day_list[0]:
       raise dqe.DailyQuestions_Day_FileNotFound(curr_day)
-    curr_day_path = day_list[0][curr_day]
-    return DailyQuestions_Day(curr_day_path)
+    curr_day_file_name = day_list[0][curr_day]
+    return DailyQuestions_Day(curr_day_file_name)
 
   def get_day_raw(self, curr_day: datetime or int):
     day_list = self.get_day_list()
     if curr_day not in day_list[0]:
       raise dqe.DailyQuestions_Day_FileNotFound(curr_day)
-    curr_day_path = day_list[0][curr_day]
-    return cr.encrypted_file_read(curr_day_path)
+    curr_day_file_name = day_list[0][curr_day]
+    return cr.encrypted_file_read(curr_day_file_name)
 
 
 def get_level(level):
