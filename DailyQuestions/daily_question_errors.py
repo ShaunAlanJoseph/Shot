@@ -47,3 +47,13 @@ class DailyQuestions_AddDay_Clashing(Exception):
   def __init__(self):
     self.message = f"New day being added clashes with an existing day."
     super().__init__(self.message)
+
+class DailyQuestions_QuestionTracker_Clashing(Exception):
+  def __init__(self, ques_str):
+    self.message = f"New ques being added clashes with existing ques: {ques_str}"
+    super().__init__(self.message)
+
+class DailyQuestions_QuestionTracker_QuesNotFound(Exception):
+  def __init__(self, ques_str):
+    self.message = f"Question not found: {ques_str}"
+    super().__init__(self.message)

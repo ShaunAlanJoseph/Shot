@@ -194,183 +194,27 @@ class DailyQuestions_Cog(commands.Cog):
 ```"""
     await ctx.reply(f"{day_format}", mention_author=False)
     
-  @commands.command(name="dq.set_details")
+  @commands.command(name="dq.set_settings")
   @is_dq_admin()
   async def dq_set_details(self, ctx):
     msg = ctx.message.content
     msg = csf.after(msg, "```")
     msg = csf.before(msg, "```")
-    dq_settings = DQ.DailyQuestions_Settings()
+    dq_settings = DQ.DailyQuestions_Settings(msg)
     dq_settings.write()
-    ctx.reply(f"Daily Questions settings have been set.", mention_author=False)
+    global dq_admin_users, dq_admin_roles, dq_time
+    for x in dq_settings.admin_users:
+      dq_admin_users.add(x)
+    for x in dq_settings.admin_roles:
+      dq_admin_roles.add(x)
+    dq_time = dq_settings.time
+    await ctx.reply(f"Daily Questions settings have been set.", mention_author=False)
   
   @commands.command(name="dq.get_settings")
   @is_dq_admin()
   async def dq_get_settings(self, ctx):
     dq_settings = DQ.DailyQuestions_Settings()
-    ctx.reply(f"Current settings for Daily Questions:\n```{dq_settings.to_str()}\n```", mention_author=False)
-  
-  @commands.command(name="dq.set_time")
-  @is_dq_admin()
-  async def dq_set_time(self, ctx, time_str):
-    time = crf.check_valid_time(time_str)
-    if not time:
-      await ctx.send(f"Invalid time: {time_str}.")
-      return
-    dq_settings = DQ.DailyQuestions_Settings()
-    dq_settings.time = time
-    global dq_time
-    dq_time = time
-    dq_settings.write()
-    await ctx.send(f"The time for daily questions has been set to {time_str}")
-  
-  @commands.command(name="dq.get_time")
-  @is_dq_admin()
-  async def dq_get_time(self, ctx):
-    dq_settings = DQ.DailyQuestions_Settings()
-    await ctx.send(f"The time for daily questions is {dq_settings.time}.")
-    pass
-  
-  @commands.command(name="dq.set_ques_chnl")
-  @is_dq_admin()
-  async def dq_set_ques_chnl(self, ctx, channel_str):
-    channel = await cdf.check_valid_channel(self.bot, channel_str)
-    if not channel:
-      await ctx.send(f"Invalid channel: {channel_str}.")
-      return
-    dq_settings = DQ.DailyQuestions_Settings()
-    dq_settings.ques_chnl = int(channel_str)
-    dq_settings.write()
-    await ctx.send(f"The channel for daily questions set to **{channel.category}** >> **{channel.name}** - {channel.id}.")
-  
-  @commands.command(name="dq.get_ques_chnl")
-  @is_dq_admin()
-  async def dq_get_ques_chnl(self, ctx):
-    dq_settings = DQ.DailyQuestions_Settings()
-    channel = await cdf.check_valid_channel(self.bot, dq_settings.ques_chnl)
-    await ctx.send(f"The channel for daily questions is **{channel.category}** >> **{channel.name}** - {channel.id}.")
-  
-  @commands.command(name="dq.set_soln_chnl")
-  @is_dq_admin()
-  async def dq_set_soln_chnl(self, ctx, channel_str):
-    channel = await cdf.check_valid_channel(self.bot, channel_str)
-    if not channel:
-      await ctx.send(f"Invalid channel: {channel_str}.")
-      return
-    dq_settings = DQ.DailyQuestions_Settings()
-    dq_settings.soln_chnl = int(channel_str)
-    dq_settings.write()
-    await ctx.send(f"The channel for the solutions set to **{channel.category}** >> **{channel.name}** - {channel.id}.")
-  
-  @commands.command(name="dq.get_soln_chnl")
-  @is_dq_admin()
-  async def dq_get_soln_chnl(self, ctx):
-    dq_settings = DQ.DailyQuestions_Settings()
-    channel = await cdf.check_valid_channel(self.bot, dq_settings.soln_chnl)
-    await ctx.send(f"The channel for the solutions is **{channel.category}** >> **{channel.name}** - {channel.id}.")
-  
-  @commands.command(name="dq.set_announcement_chnl")
-  @is_dq_admin()
-  async def dq_set_announcement_chnl(self, ctx, channel_str):
-    channel = await cdf.check_valid_channel (self.bot, channel_str)
-    if not channel:
-      await ctx.send(f"Invalid channel: {channel_str}.")
-      return
-    dq_settings = DQ.DailyQuestions_Settings()
-    dq_settings.announcement_chnl = int(channel_str)
-    dq_settings.write()
-    await ctx.send(f"The channel for announcements set to **{channel.category}** >> **{channel.name}** - {channel.id}.")
-  
-  @commands.command(name="dq.get_announcement_chnl")
-  @is_dq_admin()
-  async def dq_get_announcement_chnl(self, ctx):
-    dq_settings = DQ.DailyQuestions_Settings()
-    channel = await cdf.check_valid_channel(self.bot, dq_settings.announcement_chnl)
-    await ctx.send(f"The channel for daily question announcements is {channel.category}: {channel.name} - {channel.id}.")
-  
-  @commands.command(name="dq.set_admin_chnl")
-  @is_dq_admin()
-  async def dq_set_admin_chnl(self, ctx, channel_str):
-    channel = await cdf.check_valid_channel(self.bot, channel_str)
-    if not channel:
-      await ctx.send(f"Invalid channel: {channel_str}.")
-      return
-    dq_settings = DQ.DailyQuestions_Settings()
-    dq_settings.admin_chnl = int(channel_str)
-    dq_settings.write()
-    await ctx.send(f"The channel for daily question administration set to {channel.category}: {channel.name} - {channel.id}.")
-  
-  @commands.command(name="dq.get_admin_chnl")
-  @is_dq_admin()
-  async def dq_get_admin_chnl(self, ctx):
-    dq_settings = DQ.DailyQuestions_Settings()
-    channel = await cdf.check_valid_channel(self.bot, dq_settings.admin_chnl)
-    await ctx.send(f"The channel for daily question administration is {channel.category}: {channel.name} - {channel.id}.")
-  
-  @commands.command(name="dq.set_admin_roles")
-  @is_dq_admin()
-  async def dq_set_admin_roles(self, ctx, admin_roles):
-    admin_roles_str = admin_roles
-    admin_roles = admin_roles.strip("[]")
-    admin_roles = admin_roles.split(",") if admin_roles else []
-    possible = True
-    for x in range(len(admin_roles)):
-      if not await cdf.check_valid_role(self.bot, ctx.guild_id, admin_roles[x]):
-        await ctx.send(f"{admin_roles[x]} is not a valid role.")
-        possible = False
-    if not possible:
-      return
-    dq_settings = DQ.DailyQuestions_Settings()
-    dq_settings.admin_roles = admin_roles
-    dq_settings.write()
-    global dq_admin_roles
-    dq_admin_roles.clear()
-    for x in admin_roles:
-      dq_admin_roles.add(x)
-    await ctx.send(f"The admin roles have been set to:\n{admin_roles_str}")
-  
-  @commands.command(name="dq.get_admin_roles")
-  @is_dq_admin()
-  async def dq_get_admin_roles(self, ctx):
-    dq_settings = DQ.DailyQuestions_Settings()
-    admin_roles_str = "["
-    for x in dq_settings.admin_roles:
-      admin_roles_str += str(x) + ","
-    admin_roles_str = admin_roles_str.strip(",") + "]"
-    await ctx.send(f"The daily question admins are:\n{admin_roles_str}")
-  
-  @commands.command(name="dq.set_admin_users")
-  @is_dq_admin()
-  async def dq_set_admin_users(self, ctx, admin_users):
-    admin_users_str = admin_users
-    admin_users = admin_users.strip("[]")
-    admin_users = admin_users.split(",") if admin_users else []
-    possible = True
-    for x in range(len(admin_users)):
-      admin_users[x] = int(admin_users[x])
-      if not await cdf.check_valid_user(self.bot, admin_users[x]):
-        await ctx.send(f"{admin_users[x]} is not a valid user.")
-        possible = False
-    if not possible:
-      return
-    dq_settings = DQ.DailyQuestions_Settings()
-    dq_settings.admin_users = admin_users
-    dq_settings.write()
-    global dq_admin_users
-    dq_admin_users.clear()
-    for x in admin_users:
-      dq_admin_users.add(x)
-    await ctx.send(f"The admins have been set to:\n{admin_users_str}")
-  
-  @commands.command(name="dq.get_admin_users")
-  @is_dq_admin()
-  async def dq_get_admin_users(self, ctx):
-    dq_settings = DQ.DailyQuestions_Settings()
-    admin_users_str = "["
-    for x in dq_settings.admin_users:
-      admin_users_str += str(x) + ","
-    admin_users_str = admin_users_str.strip(",") + "]"
-    await ctx.send(f"The daily question admins are:\n{admin_users_str}")
+    await ctx.reply(f"Current settings for Daily Questions:\n```{dq_settings.to_str()}\n```", mention_author=False)
   
   @commands.command(name="dq.reset_posted")
   @is_dq_admin()

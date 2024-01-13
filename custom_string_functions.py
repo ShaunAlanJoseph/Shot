@@ -1,4 +1,4 @@
-def in_bw(haystack: str, before: str, after: str, include = 0):
+def in_bw(haystack: str, before: str, after: str, include = 0) -> str:
     
   if (not after or not before):
     return ""
@@ -17,7 +17,7 @@ def in_bw(haystack: str, before: str, after: str, include = 0):
   
   return haystack[0: pos2]
 
-def after(haystack: str, before: str, include = 0):
+def after(haystack: str, before: str, include = 0) -> str:
   if not before:
     return ""
   
@@ -31,7 +31,7 @@ def after(haystack: str, before: str, include = 0):
   
   return haystack[pos + len(before) :]
 
-def before(haystack: str, after: str, include = 0):
+def before(haystack: str, after: str, include = 0) -> str:
   if not after:
     return ""
   
@@ -45,7 +45,7 @@ def before(haystack: str, after: str, include = 0):
 
   return haystack[0 : pos]
 
-def replace(haystack: str, needle: str, replace_with: str = "", count = -1):
+def replace(haystack: str, needle: str, replace_with: str = "", count = -1) -> str:
   if (not needle or not count):
     return haystack
   
@@ -56,7 +56,7 @@ def replace(haystack: str, needle: str, replace_with: str = "", count = -1):
   
   return haystack[0 : pos] + replace_with + replace(haystack[pos + len(needle) :], needle, replace_with, count - 1)
 
-def last_occurance(haystack: str, needle: str):
+def last_occurance(haystack: str, needle: str) -> int:
   pos = -1
   
   while True:
@@ -68,7 +68,7 @@ def last_occurance(haystack: str, needle: str):
 
   return pos
 
-def replace_last_occurance(haystack: str, needle: str, replace_with = ""):
+def replace_last_occurance(haystack: str, needle: str, replace_with = "") -> str:
   if not needle:
     return haystack
   

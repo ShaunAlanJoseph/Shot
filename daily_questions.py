@@ -6,6 +6,7 @@ import custom_string_functions as csf
 import custom_random_functions as crf
 from DailyQuestions import daily_question_errors as dqe
 import config_reader as cr
+import traceback
 
 dq_folder_path = "/home/runner/Shot/DailyQuestions/"
 dq_days_folder_path = dq_folder_path + "Days/"
@@ -188,6 +189,102 @@ class DailyQuestions_Settings:
     self.validate()
     cr.encrypted_file_write(self.file_path, self.to_str())
 
+class DailyQuestions_QuestionTracker:
+  def __init__(self):
+    self.file_path = dq_folder_path + "question_dump.data"
+    self.read_questions()
+  
+  def read_questions(self):
+    file_data = cr.encrypted_file_read(self.file_path)
+    self.ques = dict()
+    while "<\q>" in file_data:
+      curr_ques = cr.config_reader(file_data, "q")
+      file_data = csf.after(file_data, "</q>")
+      self.ques[cr.config_reader(curr_ques, "a")] = {"day": cr.config_reader(curr_ques, "d"), "pf": cr.config_reader(curr_ques, "pf")}
+  
+  def format_ques(self, ques_str: str, day: int = 0):
+    ques = {"day": day}
+    ques_str = csf.after(ques_str, "https://")
+    ques_str.rstrip("/")
+    
+    if "codeforces.com" in ques_str:
+      ques["pf"] = "CF"
+      ques["ques"] = "-" + ques_str[csf.last_occurance(ques_str, "/") + 1:]
+      while "/" in ques_str:
+        if csf.before(ques_str, "/").isdigit():
+          ques["ques"] = csf.before(ques_str, "/") + ques["ques"]
+          break
+        ques_str = csf.after(ques_str, "/")
+      
+    elif "codechef.com" in ques_str:
+      ques["pf"] = "CC"
+      ques["ques"] = ques_str[csf.last_occurance(ques_str, "/") + 1:]
+    
+    elif "cses.fi" in ques_str:
+      ques["pf"] = "CS"
+      ques["ques"] = ques_str[csf.last_occurance(ques_str, "/") + 1:]
+      
+    else:
+      ques["pf"] = "OT"
+      ques["ques"] = ques_str
+      
+    return ques
+  
+  def check_unique_ques(self, ques_str: str, day: int = 0):
+    curr_ques = self.format_ques(ques_str, day)
+    if curr_ques["ques"] in self.ques:
+      return False
+    return curr_ques
+  
+  def add_day_ques(self, curr_day: DailyQuestions_Day):
+    for v in curr_day.ques.values():
+      self.add_ques(v.link, curr_day.nth)
+  
+  def remove_day_ques(self, curr_day: DailyQuestions_Day):
+    for v in curr_day.ques.values():
+      self.remove_ques(v.link)
+  
+  def add_ques(self, ques_str: str, day: int):
+    curr_ques = self.check_unique_ques(ques_str, day)
+    if not curr_ques:
+      raise dqe.DailyQuestions_QuestionTracker_Clashing(ques_str)
+    
+    self.ques[curr_ques["ques"]] = {"day": curr_ques["day"], "pf": curr_ques["pf"]}
+    self.write()
+  
+  def remove_ques(self, ques_str: str):
+    curr_ques = self.format_ques(ques_str)
+    
+    if curr_ques["ques"] not in self.ques:
+      raise dqe.DailyQuestions_QuestionTracker_QuesNotFound(ques_str)
+    
+    self.ques.pop(curr_ques["ques"])
+    self.write()
+  
+  def to_str(self):
+    string = ""
+    for q, v in self.ques.items():
+      string += "<q>"
+      string += "<a>" + q + "</a>"
+      string += "<d>" + str(v["day"]) + "</d>"
+      string += "<pf>" + v["pf"] + "</pf>"
+      string += "</q>\n"
+    return string
+
+  def write(self):
+    cr.encrypted_file_write(self.file_path, self.to_str())
+  
+  def get_ques_from_files(self):
+    try:
+      os.remove(self.file_path)
+      open(self.file_path, "w")
+      for filename in glob.glob(dq_days_folder_path + r"[[]????-??-??[]] [{]*[}] [(]*[)].data"):
+        curr_day = DailyQuestions_Day(filename)
+        for v in curr_day.ques.values():
+          self.add_ques(v.link, curr_day.nth)
+    except Exception as ex:
+      traceback.print_exc()
+
 class DailyQuestions:
   def __init__(self):
     self.folder_path = dq_folder_path
@@ -229,7 +326,10 @@ class DailyQuestions:
       raise dqe.DailyQuestions_Day_FileNotFound(curr_day)
     curr_day = DailyQuestions_Day(curr_day_path)
     curr_day_raw = cr.encrypted_file_read(curr_day_path)
+    ques_tracker = DailyQuestions_QuestionTracker()
+    ques_tracker.remove_day_ques(curr_day)
     os.remove(curr_day_path)
+    
     return {"day": curr_day, "raw": curr_day_raw}
 
   def add_day(self, curr_day_str: str):
@@ -237,6 +337,8 @@ class DailyQuestions:
     clashing_days = self.check_existing_day(curr_day)
     if len(clashing_days):
       raise dqe.DailyQuestions_AddDay_Clashing()
+    ques_tracker = DailyQuestions_QuestionTracker()
+    ques_tracker.add_day_ques(curr_day)
     curr_day.write()
     return curr_day
 
