@@ -10,11 +10,11 @@ import asyncio
 from webserver import keep_alive
 import traceback
 import random
+import pastebin_reader as pr
 
 keep_alive()
 
 DISCORD_API_SECRET = os.environ['DISCORD_API_SECRET']
-BOT_CONFIG_FILE = "bot.config"
 
 def is_bot_admin():
   async def predicate(ctx):
@@ -25,9 +25,8 @@ def is_bot_admin():
   return commands.check(predicate)
 
 def config(key, group = "", section = ""):
-  file = open(BOT_CONFIG_FILE, "r")
-  bot_config_data = file.read()
-  file.close()
+  pbm = pr.PasteBin_main()
+  bot_config_data = pbm.get_file(pbm.main["bot"])
   return cr.config_reader(bot_config_data, key, group, section)
 
 bot_admin_users = config("bot_admin_users")
