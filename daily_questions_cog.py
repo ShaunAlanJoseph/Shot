@@ -5,13 +5,13 @@ import custom_discord_functions as cdf
 import daily_questions as DQ
 from datetime import datetime, timedelta
 from Data import emojis
+import pastebin_reader as pr
 import traceback
 
 dq_admin_users = set()
 dq_admin_roles = set()
 dq_time = ""
 
-dq_questions_posted_file = "/home/runner/Shot/DailyQuestions/questions_posted.data"
 def is_dq_admin():
   async def predicate(ctx):
     if cdf.check_has_role(ctx.author, dq_admin_roles) or cdf.check_user_in_list(ctx.author, dq_admin_users):
@@ -216,25 +216,6 @@ class DailyQuestions_Cog(commands.Cog):
     dq_settings = DQ.DailyQuestions_Settings()
     await ctx.reply(f"Current settings for Daily Questions:\n```{dq_settings.to_str()}\n```", mention_author=False)
   
-  @commands.command(name="dq.reset_posted")
-  @is_dq_admin()
-  async def dq_reset_posted(self, ctx, date):
-    date = crf.check_valid_date(date)
-    if not date:
-      await ctx.send("Invalid Date!")
-      return
-    file = open(dq_questions_posted_file, "r")
-    file_data = file.read()
-    file.close()
-    if "<" + date.strftime('%Y-%m-%d') + ">" not in file_data:
-      await ctx.send(f"Questions were not posted on {date.strftime('%Y-%m-%d')}.")
-      return
-    file_data = csf.replace(file_data, "<" + date.strftime('%Y-%m-%d') + ">", count=1)
-    file = open(dq_questions_posted_file, "w")
-    file.write(file_data)
-    file.close()
-    await ctx.send(f"Reset posted question tracker for {date.strftime('%Y-%m-%d')}.")
-  
   @commands.command(name="dq.announce_ques_and_soln")
   @is_dq_admin()
   async def dq_announce_ques_and_soln(self, ctx):
@@ -273,9 +254,8 @@ def get_nth_or_date(date):
 async def announce_questions_and_soln(bot):
   try:
     date = (datetime.now() + timedelta(hours=5, minutes=30))
-    file = open(dq_questions_posted_file, "r")
-    ques_posted = file.read()
-    file.close()
+    pbm = pr.PasteBin_main()
+    ques_posted = pbm.get_file(pbm.main["dq"]["ques_posted"])
     dq_settings = DQ.DailyQuestions_Settings()
     admin_chnl = await cdf.check_valid_channel(bot, dq_settings.admin_chnl)
     if "<" + date.strftime('%Y-%m-%d %H:%M') + ">" in ques_posted:
@@ -283,9 +263,7 @@ async def announce_questions_and_soln(bot):
       await admin_chnl.send(f"Questions for {date.strftime('%Y-%m-%d %H:%M')} have aready been posted.")
       return
     ques_posted += "\n" + "<" + date.strftime('%Y-%m-%d %H:%M') + ">"
-    file = open(dq_questions_posted_file, "w")
-    file.write(ques_posted)
-    file.close()
+    pbm.edit_dq_file("ques_posted", ques_posted)
     date = crf.check_valid_date(date)
     prev_date = date - timedelta(days=1)
     dq = DQ.DailyQuestions()

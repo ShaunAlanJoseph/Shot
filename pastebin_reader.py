@@ -1,5 +1,6 @@
 import requests
 import os
+from dotenv import load_dotenv
 import custom_string_functions as csf
 
 class PasteBin_NoDevKey(Exception):
@@ -33,25 +34,29 @@ class PasteBin_main_DayNotFound(Exception):
     super().__init__(self.message)
 
 class PasteBin:
-  def __init__(self, api_dev_key: str = None, api_user_name: str = None, api_user_password: str = None):
-    if (api_dev_key == None):
+  def __init__(self, api_dev_key: str = None, api_user_name: str = None, api_user_password: str = None, api_user_key: str = None):
+    load_dotenv()
+    if (api_dev_key is None and "PASTEBIN_API_DEV_KEY" in os.environ):
       api_dev_key = os.environ["PASTEBIN_API_DEV_KEY"]
-    if (api_user_name == None):
-      api_user_name = os.environ["PASTEBIN_API_USER_NAME"]
-    if (api_user_password == None):
-      api_user_password  = os.environ["PASTEBIN_API_USER_PASSWORD"]
-
     if not api_dev_key:
       raise PasteBin_NoDevKey()
-    
     self.api_dev_key = api_dev_key
-    self.api_user_name = api_user_name
-    self.api_user_password = api_user_password
+    
+    if (api_user_key is None and "PASTEBIN_API_USER_KEY" in os.environ):
+      api_user_key  = os.environ["PASTEBIN_API_USER_KEY"]
+    self.api_user_key = api_user_key
 
     self.load_urls()
-  
-    if self.api_user_name and self.api_user_password:
-      self.api_user_key = self.get_user_key()
+
+    if not api_user_key:
+      if (api_user_name is None and "PASTEBIN_API_USER_NAME" in os.environ):
+        api_user_name = os.environ["PASTEBIN_API_USER_NAME"]
+      if (api_user_password is None and "PASTEBIN_API_USER_PASSWORD" in os.environ):
+        api_user_password  = os.environ["PASTEBIN_API_USER_PASSWORD"]
+      self.api_user_name = api_user_name
+      self.api_user_password = api_user_password
+      if self.api_user_name and self.api_user_password:
+        self.api_user_key = self.get_user_key()
   
   def load_urls(self):
     self.api_post_url = "https://pastebin.com/api/api_post.php"
@@ -88,10 +93,11 @@ class PasteBin:
   def new_paste(self, api_paste_code: str, api_paste_name: str = "", api_paste_format: str = "", api_paste_private: str = "1", api_paste_expire_date: str = "N", api_folder_key: str = ""):
     if not hasattr(self, "api_user_key") or not self.api_user_key:
       self.data = {"api_dev_key": self.api_dev_key, "api_option": "paste", "api_paste_code": api_paste_code, "api_paste_name": api_paste_name, "api_paste_format": api_paste_format, "api_paste_private": api_paste_private, "api_paste_expire_date": api_paste_expire_date}
-      return self.request_post(self.api_post_url)
-    
-    self.data = {"api_dev_key": self.api_dev_key, "api_user_key": self.api_user_key, "api_option": "paste", "api_paste_code": api_paste_code, "api_paste_name": api_paste_name, "api_paste_format": api_paste_format, "api_paste_private": api_paste_private, "api_paste_expire_date": api_paste_expire_date , "api_folder_key": api_folder_key}
-    return self.request_post(self.api_post_url)
+      file_link = self.request_post(self.api_post_url)
+    else:
+      self.data = {"api_dev_key": self.api_dev_key, "api_user_key": self.api_user_key, "api_option": "paste", "api_paste_code": api_paste_code, "api_paste_name": api_paste_name, "api_paste_format": api_paste_format, "api_paste_private": api_paste_private, "api_paste_expire_date": api_paste_expire_date , "api_folder_key": api_folder_key}
+      file_link = self.request_post(self.api_post_url)
+    return file_link[csf.last_occurance(file_link, "/") + 1:]
 
   def delete_paste(self, api_paste_key: str):
     if not hasattr(self, "api_user_key") or not self.api_user_key:
@@ -111,27 +117,35 @@ class PasteBin:
     return self.request_post(self.api_raw_url)
 
 class PasteBin_main:
-  def __init__(self, api_dev_key_main: str = None, api_user_name_main: str = None, api_user_password_main: str = None):
-    if (api_dev_key_main == None):
+  def __init__(self, api_dev_key_main: str = None, api_user_name_main: str = None, api_user_password_main: str = None, api_user_key_main: str = None):
+    if (api_dev_key_main is None and "PASTEBIN_API_DEV_KEY_MAIN" in os.environ):
       api_dev_key_main = os.environ["PASTEBIN_API_DEV_KEY_MAIN"]
-    if (api_user_name_main == None):
-      api_user_name_main = os.environ["PASTEBIN_API_USER_NAME_MAIN"]
-    if (api_user_password_main == None):
-      api_user_password_main  = os.environ["PASTEBIN_API_USER_PASSWORD_MAIN"]
-
-    if not api_dev_key_main or not api_user_name_main or not api_user_password_main:
+    if not api_dev_key_main:
       raise PasteBin_NoDevKey()
-    
     self.api_dev_key_main = api_dev_key_main
-    self.api_user_name_main = api_user_name_main
-    self.api_user_password_main = api_user_password_main
+    
+    if (api_user_key_main is None and "PASTEBIN_API_USER_KEY_MAIN" in os.environ):
+      api_user_key_main  = os.environ["PASTEBIN_API_USER_KEY_MAIN"]
+    self.api_user_key_main = api_user_key_main
 
-    self.pb = PasteBin(self, api_dev_key_main, api_user_name_main, api_user_password_main)
-    self.api_user_key_main = self.pb.get_user_key()
+    if not api_user_key_main:
+      if (api_user_name_main is None and "PASTEBIN_API_USER_NAME" in os.environ):
+        api_user_name_main = os.environ["PASTEBIN_API_USER_NAME"]
+      if (api_user_password_main is None and "PASTEBIN_API_USER_PASSWORD" in os.environ):
+        api_user_password_main  = os.environ["PASTEBIN_API_USER_PASSWORD"]
+      self.api_user_name_main = api_user_name_main
+      self.api_user_password_main = api_user_password_main
 
+    if api_user_key_main:
+      self.pb = PasteBin(api_dev_key_main, api_user_key=self.api_user_key_main)
+    else:
+      self.pb = PasteBin(api_dev_key_main, api_user_name_main, api_user_password_main)
+      self.api_user_key_main = self.pb.api_user_key
+    
     file_list = self.pb.list_files()
     self.main_key = file_list["main"]
     self.main_file_data = self.pb.get_paste(self.main_key)
+    self.scan_main_file()
   
   def scan_main_file(self):
     self.main = dict()
@@ -148,8 +162,8 @@ class PasteBin_main:
       self.main["dq"]["days"][csf.in_bw(curr_day, "<n>", "</n>")] = csf.in_bw(curr_day, "<k>", "</k>")
   
   def write(self):
-    old_main = self.pb.delete_paste(self.main)
-    self.main_key = self.pb.new_paste(self.to_str, "main", "HTML", "2")
+    old_main = self.pb.delete_paste(self.main_key)
+    self.main_key = self.pb.new_paste(self.to_str(), "main", "html5", "2")
     return old_main
 
   def to_str(self):
@@ -159,9 +173,10 @@ class PasteBin_main:
     string += f"<dq_settings>{self.main['dq']['settings']}</dq_settings>\n"
     string += f"<dq_ques_dump>{self.main['dq']['ques_dump']}</dq_ques_dump>\n"
     string += f"<dq_ques_posted>{self.main['dq']['ques_posted']}</dq_ques_posted>\n"
-    for k, v in self.main["dq"]["days"]:
+    for k, v in self.main["dq"]["days"].items():
       string += f"<dq_d><n>{k}</n><k>{v}</k></dq_d>\n"
     string += "</dq>"
+    return string
   
   def get_file(self, api_paste_key: str):
     pb = PasteBin()
@@ -174,7 +189,7 @@ class PasteBin_main:
   def edit_dq_file(self, file_name: str, file_data: str):
     pb = PasteBin()
     old_paste = pb.delete_paste(self.main["dq"][file_name])
-    self.main["dq"][file_name] = pb.new_paste(file_data, file_name + ".data", "HTML", "2", "N", os.environ["PASTEBIN_DQ_FOLDER_KEY"])
+    self.main["dq"][file_name] = pb.new_paste(file_data, file_name + ".data", "html5", "2", "N", os.environ["PASTEBIN_DQ_FOLDER_KEY"])
     self.write()
     return old_paste
   
@@ -186,7 +201,7 @@ class PasteBin_main:
       raise PasteBin_main_DayAlreadyExists(file_name)
     
     pb = PasteBin()
-    self.main["dq"]["days"][file_name] = pb.new_paste(file_data, file_name + ".data", "HTML", "2", "N", os.environ["PASTEBIN_DQ_FOLDER_KEY"])
+    self.main["dq"]["days"][file_name] = pb.new_paste(file_data, file_name + ".data", "html5", "2", "N", os.environ["PASTEBIN_DQ_FOLDER_KEY"])
     self.write()
   
   def remove_dq_day(self, file_name: str):
@@ -195,6 +210,7 @@ class PasteBin_main:
     
     pb = PasteBin()
     old_paste = pb.delete_paste(self.main["dq"]["days"][file_name])
+    self.main["dq"]["days"].pop(file_name)
     self.write()
     return old_paste
   

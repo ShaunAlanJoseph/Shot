@@ -142,9 +142,9 @@ class DailyQuestions_Day:
 
 class DailyQuestions_Settings:
   def __init__(self, settings_str = ""):
+    self.pbm = pr.PasteBin_main()
     if not settings_str:
-      self.pbm = pr.PasteBin_main()
-      settings_str = self.pbm.get_file(self.pbm.main["days"]["settings"])
+      settings_str = self.pbm.get_file(self.pbm.main["dq"]["settings"])
     self.time = cr.config_reader(settings_str, "time")
     self.time = crf.check_valid_time(self.time)
     self.ques_chnl = cr.config_reader(settings_str, "ques_chnl")
