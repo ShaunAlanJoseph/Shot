@@ -1,59 +1,49 @@
 from datetime import datetime
+from typing import Union
 
-class DailyQuestions_Question_InvalidQuestion(Exception):
-  def __init__(self, file_path: str):
-    self.file_path = file_path
-    self.message = f"Invalid Question in file path: {self.file_path}."
-    super().__init__(self.message)
 
-class DailyQuestions_Day_FileNotFound(Exception):
-  def __init__(self, file_path):
-    if isinstance(file_path, datetime):
-      self.file_path = file_path.strftime('%Y-%m-%d')
-    else:
-      self.file_path = file_path
-    self.message = f"Invalid Daily Questions file path: {self.file_path}."
-    super().__init__(self.message)
+class DailyQuestions_InvalidArgumentType(Exception):
+    def __init__(self, argument):
+        self.message = f"Invalid argument type passed: {type(argument)}."
+        super().__init__(self.message)
 
-class DailyQuestions_Day_InvalidFileName(Exception):
-  def __init__(self, file_path: str):
-    self.file_path = file_path
-    self.message = f"Invalid file name: {self.file_path}."
-    super().__init__(self.message)
 
-class DailyQuestions_Day_InvalidFileData(Exception):
-  def __init__(self, file_path: str):
-    self.file_path = file_path
-    self.message = f"Invalid file data: {self.file_path}."
-    super().__init__(self.message)
+class DailyQuestions_RequiredAttribute(Exception):
+    def __init__(self, attribute: str):
+        self.message = f"Required attribute: {attribute}"
+        super().__init__(self.message)
 
-class DailyQuestions_Day_NoQuestions(Exception):
-  def __init__(self, file_path: str):
-    self.file_path = file_path
-    self.message = f"No questions found in the file: {self.file_path}."
-    super().__init__(self.message)
 
-class DailyQuestions_Details_InvalidData(Exception):
-  def __init__(self):
-    self.message = f"Invalid change made to details."
-    super().__init__(self.message)
-    
-class DailyQuestions_DayDetails_InvalidArguments(Exception):
-  def __init__(self):
-    self.message = f"Invalid set of arguments passed."
-    super().__init__(self.message)
+class DailyQuestions_UnableToGetPaste(Exception):
+    def __init__(self, paste_key: str):
+        self.message = f"Unable to access paste: {paste_key}"
+        super().__init__(self.message)
 
-class DailyQuestions_AddDay_Clashing(Exception):
-  def __init__(self):
-    self.message = f"New day being added clashes with an existing day."
-    super().__init__(self.message)
 
-class DailyQuestions_QuestionTracker_Clashing(Exception):
-  def __init__(self, ques_str):
-    self.message = f"New ques being added clashes with existing ques: {ques_str}"
-    super().__init__(self.message)
+class DailyQuestions_DayNotFound(Exception):
+    def __init__(self, curr_day: Union(int, datetime)):
+        if isinstance(curr_day, int):
+            self.message = f"Day not found: {curr_day}"
+        elif isinstance(curr_day, datetime):
+            self.message = f"Day not found: {curr_day.strftime('%d-%m-%Y')}"
+        else:
+            self.message = f"Day not found."
+        super().__init__(self.message)
 
-class DailyQuestions_QuestionTracker_QuesNotFound(Exception):
-  def __init__(self, ques_str):
-    self.message = f"Question not found: {ques_str}"
-    super().__init__(self.message)
+
+class DailyQuestions_NewDayClash(Exception):
+    def __init__(self, clashing_days: set):
+        self.message = f"Day being added clashes with: {clashing_days}"
+        super().__init__(self.message)
+
+
+class DailyQuestions_NewQuestionClash(Exception):
+    def __init__(self):
+        self.message = f"Question begin added clashes with existing question."
+        super().__init__(self.message)
+
+
+# class DailyQuestions_NeitherDatetimeNotNth(Exception):
+#   def __init__(self, attribute: str):
+#     self.message = f"Neither datetime nor nth: {attribute}"
+#     super().__init__(self.message)

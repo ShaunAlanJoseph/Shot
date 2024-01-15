@@ -8,6 +8,7 @@ temp*
 #Folders to be Ignored
 .venv/
 .vscode/
+.idea/
 __pycache__/
 Logs/
 Shot (Old)/

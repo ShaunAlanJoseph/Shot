@@ -1,15 +1,15 @@
 from datetime import datetime
+from typing import Union
 import custom_string_functions as csf
 
 class InvalidTimeStr(Exception):
   "Raised if the time string passed to check_valid_time() is invalid."
   
   def __init__(self, time):
-    self.time = time
     self.message = f"Invalid time: {time}."
     super().__init__(self.message)
 
-def check_valid_time(time: str or datetime):
+def check_valid_time(time: Union(str, datetime)):
   if isinstance(time, datetime):
     return check_valid_time(time.strftime('%H:%M:%S:%f'))
   separator = ""
@@ -46,11 +46,10 @@ class InvalidDateStr(Exception):
   "Raised when the date string passed to check_valid_date() is invalid."
   
   def __init__(self, date):
-    self.date = date
     self.message = f"Invalid date: {date}."
     super().__init__(self.message)
 
-def check_valid_date(date: str or datetime, year_first: bool = False):
+def check_valid_date(date: Union(str, datetime), year_first: bool = False):
   if isinstance(date, datetime):
     return check_valid_date(date.strftime('%d-%m-%Y'))
   separator = ""
@@ -86,3 +85,31 @@ def check_valid_date(date: str or datetime, year_first: bool = False):
     return datetime(year, month, day)
   except:
     raise InvalidDateStr(date)
+  
+class InvalidDateTimeStr(Exception):
+  "Raised when the date string passed to check_valid_date() is invalid."
+  
+  def __init__(self, dt):
+    self.message = f"Invalid datetime: {dt}."
+    super().__init__(self.message)
+
+def check_valid_datetime(dt: Union(str, datetime)):
+  if isinstance(dt, datetime):
+    return check_valid_datetime(dt.strftime('%d-%m-%Y %H:%M'))
+  try:
+    dt_str = dt
+    day = int(csf.before(dt_str, "-"))
+    dt_str = csf.after(dt_str, "-")
+    month = int(csf.before(dt_str, "-"))
+    dt_str = csf.after(dt_str, "-")
+    year = int(csf.before(dt_str, " "))
+    dt_str = csf.after(dt_str, " ")
+    hour = int(csf.before(dt_str, ":"))
+    dt_str = csf.after(dt_str, ":")
+    min = dt_str
+    return datetime(year, month, day, hour, min)
+  except:
+    raise InvalidDateTimeStr(dt)
+
+def add_time_to_date(date: datetime, time: datetime):
+  return datetime(date.year, date.month, date.day, time.hour, time.minute, time.second, time.microsecond)
