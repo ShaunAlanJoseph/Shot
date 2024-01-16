@@ -38,28 +38,28 @@ class DailyQuestions_Cog(commands.Cog):
 
     async def cog_command_error(self, ctx, error):
         traceback.print_exc()
-        await ctx.reply(f"Error: {error}.")
+        await ctx.reply(f"Error: {error}")
 
     @commands.command(name="dq.ping", description="Pongs you...duh!")
     @is_dq_admin()
     async def dq_ping(self, ctx):
         await ctx.send(f"{ctx.author.mention} pong!!")
 
-    @commands.command(name="dq.add")
+    @commands.command(name="dq.add_day")
     @is_dq_admin()
     async def dq_add_day(self, ctx):
         new_day = csf.in_bw(ctx.message.content, "```", "```")
         new_day = self.dq.add_day(new_day)
         await ctx.reply(f"Questions for {new_day.nth}) -> {new_day.date.strftime('%Y-%m-%d')} ({new_day.durn}) have been added.", mention_author=False)
 
-    @commands.command(name="dq.remove")
+    @commands.command(name="dq.remove_day")
     @is_dq_admin()
     async def dq_remove_day(self, ctx, old_day):
         old_day = get_nth_or_date(old_day)
         old_day = self.dq.remove_day(old_day)
         await ctx.reply(f"Removed day: {old_day.nth}) -> {old_day.date.strftime('%Y-%m-%d')} ({old_day.durn}).\n**Raw:**\n```\n{old_day.to_str()}\n```", mention_author=False)
 
-    @commands.command(name="dq.replace")
+    @commands.command(name="dq.update_day")
     @is_dq_admin()
     async def dq_update_day(self, ctx, old_day):
         old_day = get_nth_or_date(old_day)
@@ -73,7 +73,7 @@ class DailyQuestions_Cog(commands.Cog):
         day_list = self.dq.get_day_list()
         msg = ""
         for x in day_list:
-            msg += f"{x['nth']}) -> {x['date'].strftime('%Y-%m-%d')} ({x['durn']})\n"
+            msg += f"{x['nth']}) -> {x['date'].strftime('%d-%m-%Y')} ({x['durn']})\n"
         await ctx.reply(f"Here is a list of days:\n{msg}", mention_author=False)
 
     @commands.command(name="dq.get_day_raw")
@@ -98,7 +98,7 @@ class DailyQuestions_Cog(commands.Cog):
     @commands.command(name="dq.announce")
     @is_dq_admin()
     async def dq_announce_ques_and_soln(self, ctx):
-        await self.announce_questions_and_soln()
+        await self.announce_ques_and_soln()
 
     @commands.command(name="dq.get_day_format")
     @is_dq_admin()
@@ -106,23 +106,30 @@ class DailyQuestions_Cog(commands.Cog):
         day_format = """```
 <d_nth></d_nth>
 <d_date></d_date>
-<d_duration>1</d_duration>
+<d_durn>1</d_durn>
 <d_note></d_note>
+<d_posted>0</d_posted>
 <q>
 <q_n>1</q_n>
 <q_lvl></q_lvl>
-<q_pts></q_pts>
+<q_pts>0</q_pts>
 <q_link></q_link>
 <q_note></q_note>
 <q_soln></q_soln>
+<q_solnby>0</q_solnby>
+<q_msg>0</q_msg>
+<q_slvd></q_slvd>
 </q>
 <q>
 <q_n>2</q_n>
 <q_lvl></q_lvl>
-<q_pts></q_pts>
+<q_pts>0</q_pts>
 <q_link></q_link>
 <q_note></q_note>
 <q_soln></q_soln>
+<q_solnby>0</q_solnby>
+<q_msg>0</q_msg>
+<q_slvd></q_slvd>
 </q>
 ```"""
         await ctx.reply(f"{day_format}", mention_author=False)
@@ -131,7 +138,8 @@ class DailyQuestions_Cog(commands.Cog):
     @is_dq_admin()
     async def dq_set_details(self, ctx):
         dq_settings = csf.in_bw(ctx.message.content, "```", "```")
-        dq_settings = self.dq.set_settings(dq_settings)
+        dq_old_settings = self.dq.set_settings(dq_settings)
+        dq_settings = self.dq.get_settings()
         global dq_admin_users, dq_admin_roles
         dq_admin_users = {x for x in dq_settings.admin_users}
         dq_admin_roles = {x for x in dq_settings.admin_roles}
@@ -140,7 +148,7 @@ class DailyQuestions_Cog(commands.Cog):
         self.dq_soln_chnl = dq_settings.soln_chnl
         self.dq_announcement_chnl = dq_settings.announcement_chnl
         self.dq_admin_chnl = dq_settings.admin_chnl
-        await ctx.reply(f"Daily Questions settings have been set.\n{dq_settings.to_str()}", mention_author=False)
+        await ctx.reply(f"Old Settings:\n```{dq_old_settings.to_str()}\n```\nDaily Questions settings have been set.\n```\n{dq_settings.to_str()}\n```", mention_author=False)
 
     @commands.command(name="dq.get_settings")
     @is_dq_admin()
@@ -158,7 +166,7 @@ class DailyQuestions_Cog(commands.Cog):
         curr_time = datetime.now() + timedelta(hours=5, minutes=30)  # converting utc to ist
         if self.dq_time.strftime('%H:%M') == curr_time.strftime('%H:%M'):
             print(f"dq: {self.dq_time.strftime('%H:%M')} now: {curr_time.strftime('%H:%M')} Now is the time!")
-            await self.announce_questions_and_soln()
+            await self.announce_ques_and_soln()
         else:
             print(f"dq: {self.dq_time.strftime('%H:%M')} now: {curr_time.strftime('%H:%M')}")
 
@@ -166,7 +174,7 @@ class DailyQuestions_Cog(commands.Cog):
     async def before_check_dq_time(self):
         await self.bot.wait_until_ready()
 
-    async def announce_questions_and_soln(self):
+    async def announce_ques_and_soln(self):
         pass
 
     async def announce_ques(self, day: DQ.DailyQuestions_Day):
@@ -174,7 +182,7 @@ class DailyQuestions_Cog(commands.Cog):
             ques_msg = day.to_announce_ques()
             ques_chnl = await cdf.check_valid_channel(self.bot, self.dq_ques_chnl)
             await ques_chnl.send(ques_msg["title"])
-            for x in ques_msg["questions"]:
+            for x in ques_msg["ques"]:
                 msg = await ques_chnl.send(x)
                 await msg.add_reaction(emojis.white_check_mark)
         except Exception as ex:
@@ -185,7 +193,7 @@ class DailyQuestions_Cog(commands.Cog):
             soln_msg = day.to_announce_soln()
             soln_chnl = await cdf.check_valid_channel(self.bot, self.dq_soln_chnl)
             await soln_chnl.send(soln_msg["title"])
-            for x in soln_msg["questions"]:
+            for x in soln_msg["ques"]:
                 msg = ""
                 for y in x:
                     msg = await soln_chnl.send(y)
@@ -200,7 +208,6 @@ async def setup(bot):
 
 def get_nth_or_date(date: str):
     if date.isdigit():
-        date = crf.check_valid_date(date)
-        return date
-    else:
         return int(date)
+    else:
+        return crf.check_valid_date(date)

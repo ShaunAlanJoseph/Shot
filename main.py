@@ -33,11 +33,7 @@ def config(key):
 
 
 bot_admin_users = config("bot_admin_users")
-bot_admin_users = bot_admin_users.split(";") if bot_admin_users else []
-bot_admin_users = [int(x) for x in bot_admin_users]
 bot_admin_roles = config("bot_admin_roles")
-bot_admin_roles = bot_admin_roles.split(";") if bot_admin_roles else []
-bot_admin_roles = [int(x) for x in bot_admin_roles]
 
 
 async def start():
@@ -56,8 +52,7 @@ async def start():
         print("------")
         await bot.tree.sync()
         nonlocal bot_msg_channel
-        bot_msg_channel = int(config("bot_msg_channel"))
-        bot_msg_channel = bot.get_channel(bot_msg_channel)
+        bot_msg_channel = bot.get_channel(config("bot_msg_chnl"))
         await bot_msg_channel.send(f"Hi, I've logged in as **User:** {bot.user} (**ID:** {bot.user.id})")
         update_presence.start()
 
@@ -84,7 +79,7 @@ async def start():
             elif bot_activity == 4:
                 activity = discord.CustomActivity(f"{emojis.nerd} Reading the CPH!! {emojis.paper}")
             elif bot_activity == 5:
-                activity = discord.Activity(type=discord.ActivityType.listening, name=f"Test Drive {emojis.music}")
+                activity = discord.Activity(type=discord.ActivityType.listening, name=f"Test Drive {emojis.headphones}")
             else:
                 activity = discord.CustomActivity(f"**Shaun's Bot!!**")
             await bot.change_presence(activity=activity)

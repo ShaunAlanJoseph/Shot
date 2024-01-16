@@ -72,7 +72,7 @@ class DailyQuestions_Question:
         curr_day_str += add_tags(self.soln, "q_soln") + "\n"
         curr_day_str += add_tags(self.solnby, "q_solnby") + "\n"
         curr_day_str += add_tags(self.q_msg, "q_msg") + "\n"
-        curr_day_str += add_tags(";".join(self.slvd), "slvd")
+        curr_day_str += add_tags(";".join([str(x) for x in self.slvd]), "q_slvd")
         return curr_day_str
 
     def to_dict(self) -> dict:
@@ -155,7 +155,7 @@ class DailyQuestions_Day:
         for x in self.ques:
             curr_day_str += "<q>\n"
             curr_day_str += x.to_str()
-            curr_day_str += "</q>\n"
+            curr_day_str += "\n</q>\n"
         curr_day_str.rstrip("\n")
         return curr_day_str
 
@@ -206,10 +206,10 @@ class DailyQuestions_Day:
             curr_str = f"**Question {x.nth}:**"
             if x.lvl:
                 curr_str += f"\n**Level:** {x.lvl}"
-            curr_str += f"\n**Link:** {x.link}"
+            curr_str += f"\n**Link:** <{x.link}>"
             curr_str += f"\n**Soln{f'(by <u>{x.solnby}</u>)' if x.solnby else ''}:**"
             if not x.soln:
-                curr_str += f"SOLN NOT WRITTEN!!"
+                curr_str += f" SOLN NOT WRITTEN!!"
                 soln_msg["ques"].append([curr_str])
                 continue
             soln_list = soln_splitter(x.soln)
@@ -272,13 +272,13 @@ class DailyQuestions_Settings:
 
     def to_str(self) -> str:
         curr_set_str = ""
-        curr_set_str += add_tags(self.time.strftime('%H:%M'), "time")
-        curr_set_str += add_tags(self.ques_chnl, "ques_chnl")
-        curr_set_str += add_tags(self.soln_chnl, "soln_chnl")
-        curr_set_str += add_tags(self.announcement_chnl, "announcement_chnl")
-        curr_set_str += add_tags(self.admin_chnl, "admin_chnl")
-        curr_set_str += add_tags(";".join(self.admin_roles), "admin_roles")
-        curr_set_str += add_tags(";".join(self.admin_users), "admin_users")
+        curr_set_str += add_tags(self.time.strftime('%H:%M'), "time") + "\n"
+        curr_set_str += add_tags(self.ques_chnl, "ques_chnl") + "\n"
+        curr_set_str += add_tags(self.soln_chnl, "soln_chnl") + "\n"
+        curr_set_str += add_tags(self.announcement_chnl, "announcement_chnl") + "\n"
+        curr_set_str += add_tags(self.admin_chnl, "admin_chnl") + "\n"
+        curr_set_str += add_tags(";".join([str(x) for x in self.admin_roles]), "admin_roles") + "\n"
+        curr_set_str += add_tags(";".join([str(x) for x in self.admin_users]), "admin_users")
         return curr_set_str
 
     def to_dict(self) -> dict:
@@ -323,23 +323,20 @@ class DailyQuestions:
 
     def update_day(self, old_day: Union[int, datetime], new_day_str: str) -> DailyQuestions_Day:
         old_day_obj = self.get_day(old_day)
-        if isinstance(old_day, int):
-            self.Days.delete_one({"type": "day", "nth": old_day})
-        elif isinstance(old_day, datetime):
-            self.Days.delete_one({"type": "day", "date": old_day})
-        else:
-            raise dqe.DailyQuestions_InvalidArgumentType(old_day)
         new_day = DailyQuestions_Day(new_day_str)
         clashing_days_set = self.get_clashing_days(new_day)
-        clashing_day = clashing_days_set.pop()
-        if clashing_days_set or old_day_obj.to_dict() != clashing_day:
-            raise dqe.DailyQuestions_NewDayClash(clashing_day)
+        clashing_day = dict(clashing_days_set.pop())
+        if clashing_days_set or old_day_obj.to_mini_dict() != clashing_day:
+            raise dqe.DailyQuestions_NewDayClash(clashing_days_set)
         for x in new_day.ques:
             ques_clash = self.Days.find_one({"type": "day", "ques": {"link_dtls": x.link_dtls}},
-                                           {"nth": 1, "date": 1, "durn": 1})
-            if ques_clash != clashing_day:
+                                            {"nth": 1, "date": 1, "durn": 1})
+            if not ques_clash:
+                continue
+
+            if ques_clash.pop("_id") != clashing_day:
                 raise dqe.DailyQuestions_NewQuestionClash()
-        self.Days.update_one({"type": "day", "nth": old_day_obj.nth}, {"$set", new_day.to_dict()})
+        self.Days.update_one({"type": "day", "nth": old_day_obj.nth}, {"$set": new_day.to_dict()})
         return old_day_obj
 
     def get_day(self, curr_day: Union[int, datetime]) -> DailyQuestions_Day:
@@ -358,14 +355,17 @@ class DailyQuestions:
         day_list = self.get_day_list()
         for x in day_list:
             if x["nth"] == curr_day.nth:
-                clashing_days.add(x)
+                clashing_days.add(frozenset(x.items()))
             if x["date"] <= curr_day.date < x["date"] + timedelta(days=x["durn"]):
-                clashing_days.add(x)
+                clashing_days.add(frozenset(x.items()))
         return clashing_days
 
     def get_day_list(self) -> list:
         result = self.Days.find({"type": "day"}, {"nth": 1, "date": 1, "durn": 1}).sort("nth")
-        return list(result)
+        result = list(result)
+        for i in range(0, len(result)):
+            result[i].pop("_id")
+        return result
 
     def get_settings(self) -> DailyQuestions_Settings:
         result = self.Additional.find_one({"type": "settings"})
@@ -413,7 +413,7 @@ def read_tag(haystack: str, tag: str) -> str:
 
 
 def add_tags(haystack: str, tag: str) -> str:
-    return f"<{tag}>{haystack}.</{tag}>"
+    return f"<{tag}>{haystack}</{tag}>"
 
 
 def soln_splitter(soln_str: str) -> list:

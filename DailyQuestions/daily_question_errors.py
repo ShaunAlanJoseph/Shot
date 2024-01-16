@@ -21,7 +21,7 @@ class DailyQuestions_UnableToGetPaste(Exception):
 
 
 class DailyQuestions_DayNotFound(Exception):
-    def __init__(self, curr_day: Union(int, datetime)):
+    def __init__(self, curr_day: Union[int, datetime]):
         if isinstance(curr_day, int):
             self.message = f"Day not found: {curr_day}"
         elif isinstance(curr_day, datetime):
