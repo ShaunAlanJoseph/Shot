@@ -207,7 +207,7 @@ class DailyQuestions_Day:
             if x.lvl:
                 curr_str += f"\n**Level:** {x.lvl}"
             curr_str += f"\n**Link:** <{x.link}>"
-            curr_str += f"\n**Soln{f'(by <u>{x.solnby}</u>)' if x.solnby else ''}:**"
+            curr_str += f"\n**Soln{f' (by <u>{x.solnby}</u>)' if x.solnby else ''}:**"
             if not x.soln:
                 curr_str += f" SOLN NOT WRITTEN!!"
                 soln_msg["ques"].append([curr_str])

@@ -3,8 +3,5 @@ python-dotenv
 pymongo
 requests
 discord.py
-traceback
-datetime
-os
-random
 typing
+flask

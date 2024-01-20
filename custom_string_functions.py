@@ -3,7 +3,7 @@ def in_bw(haystack: str, before: str, after: str, include=0) -> str:
         return ""
 
     pos1 = haystack.find(before)
-    if (pos1 == -1):
+    if pos1 == -1:
         return ""
 
     haystack = haystack[pos1 + len(before):]

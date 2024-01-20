@@ -1,1 +1,0 @@
-[![Run on Repl.it](https://replit.com/badge/github/ShaunAlanJoseph/Shot.git)](https://replit.com/new/github/ShaunAlanJoseph/Shot.git)

@@ -196,6 +196,13 @@ class DailyQuestions_Cog(commands.Cog):
             for x in soln_msg["ques"]:
                 msg = ""
                 for y in x:
+                    if "</u>" in y:
+                        soln_by = csf.in_bw(y, "<u>", "</u>")
+                        soln_by = await cdf.check_valid_user(self.bot, soln_by)
+                        if soln_by is None:
+                            y = csf.replace(y, csf.in_bw(y, "Soln ", "</u>:"), "Soln:")
+                        else:
+                            y = csf.replace(y, f"<u>{soln_by.id}</u>", f"{soln_by.mention}")
                     msg = await soln_chnl.send(y)
                 await msg.add_reaction(emojis.sparkles)
         except Exception as ex:
