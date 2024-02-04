@@ -1,6 +1,7 @@
 from mongodb_reader import get_mongo_client
 import custom_string_functions as csf
 import custom_random_functions as crf
+import config_reader as cr
 from DailyQuestions import daily_question_errors as dqe
 from datetime import datetime, timedelta
 from typing import Union
@@ -223,6 +224,8 @@ class DailyQuestions_Settings:
         self.time = None
         self.ques_chnl = None
         self.soln_chnl = None
+        self.ques_test_chnl = None
+        self.soln_test_chnl = None
         self.announcement_chnl = None
         self.admin_chnl = None
         self.admin_roles = None
@@ -238,6 +241,8 @@ class DailyQuestions_Settings:
         self.time = crf.check_valid_time(read_tag(curr_set_str, "time"))
         self.ques_chnl = int(read_tag(curr_set_str, "ques_chnl"))
         self.soln_chnl = int(read_tag(curr_set_str, "soln_chnl"))
+        self.ques_test_chnl = int(read_tag(curr_set_str, "ques_test_chnl"))
+        self.soln_test_chnl = int(read_tag(curr_set_str, "soln_test_chnl"))
         self.announcement_chnl = int(read_tag(curr_set_str, "announcement_chnl"))
         self.admin_chnl = int(read_tag(curr_set_str, "admin_chnl"))
         self.admin_roles = read_tag(curr_set_str, "admin_roles").split(";")
@@ -250,6 +255,8 @@ class DailyQuestions_Settings:
         self.time = curr_set["time"]
         self.ques_chnl = curr_set["ques_chnl"]
         self.soln_chnl = curr_set["soln_chnl"]
+        self.ques_test_chnl = curr_set["ques_test_chnl"]
+        self.soln_test_chnl = curr_set["soln_test_chnl"]
         self.announcement_chnl = curr_set["announcement_chnl"]
         self.admin_chnl = curr_set["admin_chnl"]
         self.admin_roles = curr_set["admin_roles"]
@@ -263,6 +270,10 @@ class DailyQuestions_Settings:
             raise dqe.DailyQuestions_RequiredAttribute("ques_chnl")
         if not self.soln_chnl:
             raise dqe.DailyQuestions_RequiredAttribute("soln_chnl")
+        if not self.ques_test_chnl:
+            raise dqe.DailyQuestions_RequiredAttribute("ques_test_chnl")
+        if not self.soln_test_chnl:
+            raise dqe.DailyQuestions_RequiredAttribute("soln_test_chnl")
         if not self.announcement_chnl:
             raise dqe.DailyQuestions_RequiredAttribute("announcement_chnl")
         if not self.admin_chnl:
@@ -275,6 +286,8 @@ class DailyQuestions_Settings:
         curr_set_str += add_tags(self.time.strftime('%H:%M'), "time") + "\n"
         curr_set_str += add_tags(self.ques_chnl, "ques_chnl") + "\n"
         curr_set_str += add_tags(self.soln_chnl, "soln_chnl") + "\n"
+        curr_set_str += add_tags(self.ques_test_chnl, "ques_test_chnl") + "\n"
+        curr_set_str += add_tags(self.soln_test_chnl, "soln_test_chnl") + "\n"
         curr_set_str += add_tags(self.announcement_chnl, "announcement_chnl") + "\n"
         curr_set_str += add_tags(self.admin_chnl, "admin_chnl") + "\n"
         curr_set_str += add_tags(";".join([str(x) for x in self.admin_roles]), "admin_roles") + "\n"
@@ -287,6 +300,8 @@ class DailyQuestions_Settings:
         curr_set["time"] = self.time
         curr_set["ques_chnl"] = self.ques_chnl
         curr_set["soln_chnl"] = self.soln_chnl
+        curr_set["ques_test_chnl"] = self.ques_test_chnl
+        curr_set["soln_test_chnl"] = self.soln_test_chnl
         curr_set["announcement_chnl"] = self.announcement_chnl
         curr_set["admin_chnl"] = self.admin_chnl
         curr_set["admin_roles"] = self.admin_roles
@@ -421,6 +436,10 @@ def soln_splitter(soln_str: str) -> list:
         paste_key = read_tag(soln_str, "pb")
         paste_data = get_from_pastebin(paste_key)
         soln_str = csf.replace(soln_str, add_tags(paste_key, "pb"), paste_data, 1)
+    while "</pbe>" in soln_str:
+        paste_key = read_tag(soln_str, "pbe")
+        paste_data = get_encrypted_from_pastebin(paste_key)
+        soln_str = csf.replace(soln_str, add_tags(paste_key, "pbe"), paste_data, 1)
     soln_str = csf.replace(soln_str, "<img>", "<br>")
     soln_str = csf.replace(soln_str, "</img>", "<br>")
     soln_list = soln_str.split("<br>")
@@ -433,6 +452,11 @@ def get_from_pastebin(paste_key: str) -> str:
     if r.reason != "OK":
         raise dqe.DailyQuestions_UnableToGetPaste(paste_key)
     return r.text
+
+
+def get_encrypted_from_pastebin(paste_key: str) -> str:
+    encrypted_string = get_from_pastebin(paste_key)
+    return cr.decrypt(encrypted_string)
 
 
 def get_level(level) -> str:

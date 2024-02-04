@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands, tasks
+import custom_string_functions as csf
 import custom_discord_functions as cdf
 from Data import emojis
 import asyncio
@@ -106,6 +107,34 @@ async def start():
         except:
             await ctx.send(f"Failed to reload DailyQuestions_Cog. Error: {Exception}")
             print(f"Failed to reload DailyQuestions_Cog. Error: {Exception}")
+
+    @bot.command(name="send_msg")
+    @is_bot_admin()
+    async def send_msg(ctx, chnl_id):
+        msg_content = csf.in_bw(ctx.message.content, "```", "```")
+        try:
+            msg_chnl = await cdf.check_valid_channel(bot, chnl_id)
+            await msg_chnl.send(msg_content)
+            await ctx.reply(f"The message was sent!", mention_author=False)
+        except Exception as ex:
+            traceback.print_exc()
+            await ctx.reply(f"There was an error sending the message: {ex}")
+        pass
+
+    @bot.command(name="edit_msg")
+    @is_bot_admin()
+    async def edit_msg(ctx, msg_id, channel_id):
+        new_content = csf.in_bw(ctx.message.content, "```", "```")
+        try:
+            channel = await cdf.check_valid_channel(bot, channel_id)
+            message = await channel.fetch_message(int(msg_id))
+            old_content = message.content
+            await message.edit(content=new_content)
+            await ctx.reply(f"**Old Content**:\n```\n{old_content}\n```", mention_author=False)
+        except Exception as ex:
+            traceback.print_exc()
+            await ctx.reply(f"There was an error editing the message: {ex}")
+        pass
 
     await bot.start(DISCORD_API_SECRET)
 

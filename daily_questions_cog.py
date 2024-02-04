@@ -32,6 +32,8 @@ class DailyQuestions_Cog(commands.Cog):
         self.dq_time = dq_settings.time
         self.dq_ques_chnl = dq_settings.ques_chnl
         self.dq_soln_chnl = dq_settings.soln_chnl
+        self.dq_ques_test_chnl = dq_settings.ques_test_chnl
+        self.dq_soln_test_chnl = dq_settings.soln_test_chnl
         self.dq_announcement_chnl = dq_settings.announcement_chnl
         self.dq_admin_chnl = dq_settings.admin_chnl
         self.check_dq_time.start()
@@ -95,6 +97,18 @@ class DailyQuestions_Cog(commands.Cog):
         day = get_nth_or_date(date)
         await self.announce_soln(self.dq.get_day(day))
 
+    @commands.command(name="dq.test_announce_ques")
+    @is_dq_admin()
+    async def dq_announce_ques(self, ctx, date):
+        day = get_nth_or_date(date)
+        await self.announce_ques(self.dq.get_day(day), testing=True)
+
+    @commands.command(name="dq.test_announce_soln")
+    @is_dq_admin()
+    async def dq_announce_soln(self, ctx, date):
+        day = get_nth_or_date(date)
+        await self.announce_soln(self.dq.get_day(day), testing=True)
+
     @commands.command(name="dq.announce")
     @is_dq_admin()
     async def dq_announce_ques_and_soln(self, ctx):
@@ -146,6 +160,8 @@ class DailyQuestions_Cog(commands.Cog):
         self.dq_time = dq_settings.time
         self.dq_ques_chnl = dq_settings.ques_chnl
         self.dq_soln_chnl = dq_settings.soln_chnl
+        self.dq_ques_test_chnl = dq_settings.ques_test_chnl
+        self.dq_soln_test_chnl = dq_settings.soln_test_chnl
         self.dq_announcement_chnl = dq_settings.announcement_chnl
         self.dq_admin_chnl = dq_settings.admin_chnl
         await ctx.reply(f"Old Settings:\n```{dq_old_settings.to_str()}\n```\nDaily Questions settings have been set.\n```\n{dq_settings.to_str()}\n```", mention_author=False)
@@ -177,10 +193,10 @@ class DailyQuestions_Cog(commands.Cog):
     async def announce_ques_and_soln(self):
         pass
 
-    async def announce_ques(self, day: DQ.DailyQuestions_Day):
+    async def announce_ques(self, day: DQ.DailyQuestions_Day, testing: bool = False):
         try:
             ques_msg = day.to_announce_ques()
-            ques_chnl = await cdf.check_valid_channel(self.bot, self.dq_ques_chnl)
+            ques_chnl = await cdf.check_valid_channel(self.bot, self.dq_ques_test_chnl if testing else self.dq_ques_chnl)
             await ques_chnl.send(ques_msg["title"])
             for x in ques_msg["ques"]:
                 msg = await ques_chnl.send(x)
@@ -188,10 +204,10 @@ class DailyQuestions_Cog(commands.Cog):
         except Exception as ex:
             traceback.print_exc()
 
-    async def announce_soln(self, day: DQ.DailyQuestions_Day):
+    async def announce_soln(self, day: DQ.DailyQuestions_Day, testing: bool = False):
         try:
             soln_msg = day.to_announce_soln()
-            soln_chnl = await cdf.check_valid_channel(self.bot, self.dq_soln_chnl)
+            soln_chnl = await cdf.check_valid_channel(self.bot, self.dq_soln_test_chnl if testing else self.dq_ques_chnl)
             await soln_chnl.send(soln_msg["title"])
             for x in soln_msg["ques"]:
                 msg = ""
